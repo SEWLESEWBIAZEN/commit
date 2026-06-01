@@ -1,0 +1,8 @@
+# Supabase project config. The project_id ties local config to your remote
+# project (the "ref" from your Supabase URL). Run `pnpm db:push` to apply the
+# SQL files in supabase/migrations to the linked database.
+project_id = "tsbugtmoztiboeojhxyf"
+
+[db]
+# Postgres major version your Supabase project runs.
+major_version = 15

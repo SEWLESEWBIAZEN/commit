@@ -56,19 +56,17 @@ interface TagProps { tone?: Tone; style?: React.CSSProperties; children: React.R
 export function Tag({ tone = 'muted', style = {}, children }: TagProps) {
   const c = toneMap[tone];
   return (
-    <span className="mono" style={{
-      display: 'inline-flex', alignItems: 'center', gap: 6,
-      fontSize: 11, lineHeight: 1, padding: '5px 8px',
-      borderRadius: 999, border: `1px solid ${c.border}`,
-      color: c.color, background: c.bg, ...style,
-    }}>{children}</span>
+    <span
+      className="mono inline-flex items-center gap-1.5 rounded-full border px-2 py-[5px] text-[11px] leading-none"
+      style={{ borderColor: c.border, color: c.color, background: c.bg, ...style }}
+    >{children}</span>
   );
 }
 
 // ── Section label ─────────────────────────────────────────────
 export function SectionLabel({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <div className="mono" style={{ fontSize: 11, color: 'var(--hint)', textTransform: 'uppercase', letterSpacing: '0.08em', ...style }}>
+    <div className="mono text-[11px] uppercase tracking-[0.08em] text-hint" style={style}>
       {children}
     </div>
   );
@@ -92,18 +90,15 @@ export function Button({ kind = 'solid', children, onClick, icon, iconRight, sty
   return (
     <button
       onClick={blocked ? undefined : onClick} disabled={blocked}
+      className="flex w-full items-center justify-center gap-[9px] rounded px-[18px] py-[14px] text-base font-medium tracking-[-0.01em] transition-[filter]"
       style={{
-        width: '100%', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 16,
-        borderRadius: 'var(--r)', padding: '14px 18px', display: 'flex',
-        alignItems: 'center', justifyContent: 'center', gap: 9,
-        letterSpacing: '-0.01em', transition: 'filter .15s',
         cursor: blocked ? (loading ? 'progress' : 'not-allowed') : 'pointer',
         opacity: blocked ? 0.6 : 1,
         ...kindStyles[kind], ...style,
       }}
     >
       {loading
-        ? <span style={{ display: 'inline-flex', gap: 4 }}><span className="cm-dot" /><span className="cm-dot" /><span className="cm-dot" /></span>
+        ? <span className="inline-flex gap-1"><span className="cm-dot" /><span className="cm-dot" /><span className="cm-dot" /></span>
         : icon && <Icon name={icon} size={18} />}
       <span>{children}</span>
       {iconRight && !loading && <Icon name={iconRight} size={18} />}
@@ -115,13 +110,13 @@ export function Button({ kind = 'solid', children, onClick, icon, iconRight, sty
 interface DiffStatProps { repo: string; add: number; del: number; files?: number; style?: React.CSSProperties; }
 export function DiffStat({ repo, add, del, files, style = {} }: DiffStatProps) {
   return (
-    <div className="mono" style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 12.5, flexWrap: 'wrap', ...style }}>
-      <span style={{ color: 'var(--muted)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+    <div className="mono flex flex-wrap items-center gap-2.5 text-[12.5px]" style={style}>
+      <span className="inline-flex items-center gap-1.5 text-muted">
         <Icon name="branch" size={13} sw={1.8} style={{ color: 'var(--hint)' }} />{repo}
       </span>
-      <span style={{ color: 'var(--green)' }}>+{add}</span>
-      <span style={{ color: 'var(--red)' }}>&minus;{del}</span>
-      {files != null && <span style={{ color: 'var(--hint)' }}>{files} {files === 1 ? 'file' : 'files'}</span>}
+      <span className="text-green">+{add}</span>
+      <span className="text-red">&minus;{del}</span>
+      {files != null && <span className="text-hint">{files} {files === 1 ? 'file' : 'files'}</span>}
     </div>
   );
 }
@@ -131,14 +126,14 @@ interface StreakHeroProps { days: number; label?: string; tone?: 'green' | 'red'
 export function StreakHero({ days, label = 'day streak', tone = 'green', sub, big = 104 }: StreakHeroProps) {
   const color = tone === 'red' ? 'var(--red)' : tone === 'muted' ? 'var(--muted)' : 'var(--green)';
   return (
-    <div style={{ textAlign: 'center' }}>
-      <div className="mono" style={{
-        fontSize: big, lineHeight: 0.92, fontWeight: 500, color,
+    <div className="text-center">
+      <div className="mono font-medium" style={{
+        fontSize: big, lineHeight: 0.92, color,
         letterSpacing: '-0.04em', fontFeatureSettings: '"tnum" 1',
         textShadow: tone === 'green' ? '0 0 40px rgba(63,185,80,0.22)' : 'none',
       }}>{days}</div>
-      <div className="mono" style={{ marginTop: 12, fontSize: 13, color: 'var(--muted)', letterSpacing: '0.04em' }}>{label}</div>
-      {sub && <div style={{ marginTop: 6, fontSize: 13.5, color: 'var(--hint)' }}>{sub}</div>}
+      <div className="mono mt-3 text-[13px] tracking-[0.04em] text-muted">{label}</div>
+      {sub && <div className="mt-1.5 text-[13.5px] text-hint">{sub}</div>}
     </div>
   );
 }
@@ -148,7 +143,7 @@ type DayState = 'counted' | 'missed' | 'none';
 interface WeekStripProps { days: DayState[]; today?: 'counted' | 'pending'; }
 export function WeekStrip({ days, today = 'pending' }: WeekStripProps) {
   return (
-    <div style={{ display: 'flex', gap: 6, justifyContent: 'center', alignItems: 'center' }}>
+    <div className="flex items-center justify-center gap-1.5">
       {days.map((d, i) => (
         <div key={i} style={{
           width: 16, height: 16, borderRadius: 4,
@@ -171,11 +166,11 @@ interface CoachQuoteProps { children: React.ReactNode; label?: string; tone?: 'b
 export function CoachQuote({ children, label = 'the coach read your diff', tone = 'blue' }: CoachQuoteProps) {
   const edge = tone === 'amber' ? 'var(--amber)' : 'var(--blue)';
   return (
-    <div style={{ borderLeft: `2px solid ${edge}`, paddingLeft: 16 }}>
-      <div className="mono" style={{ fontSize: 11, color: 'var(--hint)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 9, display: 'flex', alignItems: 'center', gap: 7 }}>
+    <div className="pl-4" style={{ borderLeft: `2px solid ${edge}` }}>
+      <div className="mono mb-[9px] flex items-center gap-[7px] text-[11px] uppercase tracking-[0.07em] text-hint">
         <Icon name="quote" size={13} style={{ color: edge }} />{label}
       </div>
-      <div style={{ fontSize: 18, lineHeight: 1.42, color: 'var(--text)' }}>{children}</div>
+      <div className="text-lg leading-[1.42] text-text">{children}</div>
     </div>
   );
 }
@@ -194,16 +189,16 @@ interface VerdictBlockProps {
 export function VerdictBlock({ variant = 'streak', label, title, children, footer, style = {} }: VerdictBlockProps) {
   const c = verdictMap[variant];
   return (
-    <div style={{ background: c.fill, border: `1px solid ${c.edge}`, borderRadius: 'var(--r)', padding: 16, ...style }}>
-      <div className="mono" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11.5, textTransform: 'uppercase', letterSpacing: '0.07em', color: c.color }}>
-        <span style={{ width: 20, height: 20, borderRadius: 5, background: c.color, color: 'var(--bg)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+    <div className="rounded p-4" style={{ background: c.fill, border: `1px solid ${c.edge}`, ...style }}>
+      <div className="mono flex items-center gap-2 text-[11.5px] uppercase tracking-[0.07em]" style={{ color: c.color }}>
+        <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-[5px] text-bg" style={{ background: c.color }}>
           <Icon name={c.icon} size={13} sw={2.4} />
         </span>
         {label}
       </div>
-      {title && <div style={{ fontSize: 16, marginTop: 11, color: 'var(--text)', fontWeight: 500 }}>{title}</div>}
-      {children && <div style={{ fontSize: 14.5, lineHeight: 1.5, marginTop: title ? 5 : 11, color: 'var(--muted)' }}>{children}</div>}
-      {footer && <div style={{ marginTop: 14 }}>{footer}</div>}
+      {title && <div className="mt-[11px] text-base font-medium text-text">{title}</div>}
+      {children && <div className="text-[14.5px] leading-normal text-muted" style={{ marginTop: title ? 5 : 11 }}>{children}</div>}
+      {footer && <div className="mt-[14px]">{footer}</div>}
     </div>
   );
 }
@@ -213,9 +208,9 @@ interface StatusRowProps { tone?: Tone; children: React.ReactNode; pulse?: boole
 export function StatusRow({ tone = 'muted', children, pulse = false }: StatusRowProps) {
   const color = { green: 'var(--green)', amber: 'var(--amber)', red: 'var(--red)', muted: 'var(--hint)', blue: 'var(--blue)' }[tone];
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13.5, color: 'var(--muted)' }}>
-      <span className={pulse ? 'cm-pulse' : ''} style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0, boxShadow: tone === 'green' ? '0 0 8px var(--green)' : 'none' }} />
-      <span style={{ flex: 1 }}>{children}</span>
+    <div className="flex items-center gap-2.5 text-[13.5px] text-muted">
+      <span className={`h-2 w-2 shrink-0 rounded-full ${pulse ? 'cm-pulse' : ''}`} style={{ background: color, boxShadow: tone === 'green' ? '0 0 8px var(--green)' : 'none' }} />
+      <span className="flex-1">{children}</span>
     </div>
   );
 }
@@ -229,13 +224,17 @@ export function BottomNav({ active, onNav }: BottomNavProps) {
     { id: 'settings', label: 'Settings', icon: 'gear' as IconName },
   ];
   return (
-    <div style={{ display: 'flex', borderTop: '1px solid var(--border-soft)', background: 'var(--bg)', paddingBottom: 'var(--safe-bottom)', flexShrink: 0 }}>
+    <div className="flex shrink-0 border-t border-border-soft bg-bg pb-[var(--safe-bottom)]">
       {tabs.map(t => {
         const on = active === t.id || (active === 'insightsEmpty' && t.id === 'insights');
         return (
-          <button key={t.id} onClick={() => onNav(t.id)} style={{ flex: 1, background: 'none', border: 0, padding: '11px 0 9px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, color: on ? 'var(--text)' : 'var(--hint)', transition: 'color .15s' }}>
+          <button
+            key={t.id}
+            onClick={() => onNav(t.id)}
+            className={`flex flex-1 flex-col items-center gap-[5px] border-0 bg-transparent pb-[9px] pt-[11px] transition-colors ${on ? 'text-text' : 'text-hint'}`}
+          >
             <Icon name={t.icon} size={22} sw={on ? 2 : 1.7} />
-            <span style={{ fontSize: 11, fontWeight: on ? 500 : 400 }}>{t.label}</span>
+            <span className={`text-[11px] ${on ? 'font-medium' : 'font-normal'}`}>{t.label}</span>
           </button>
         );
       })}
@@ -246,8 +245,8 @@ export function BottomNav({ active, onNav }: BottomNavProps) {
 // ── Wordmark ──────────────────────────────────────────────────
 export function Wordmark({ size = 15 }: { size?: number }) {
   return (
-    <span className="mono" style={{ fontSize: size, color: 'var(--text)', fontWeight: 500, letterSpacing: '-0.02em', display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-      <span style={{ color: 'var(--green)' }}>$</span>commit
+    <span className="mono inline-flex items-center gap-[7px] font-medium tracking-[-0.02em] text-text" style={{ fontSize: size }}>
+      <span className="text-green">$</span>commit
     </span>
   );
 }
@@ -255,8 +254,11 @@ export function Wordmark({ size = 15 }: { size?: number }) {
 // ── Toggle ────────────────────────────────────────────────────
 export function Toggle({ on = false }: { on?: boolean }) {
   return (
-    <div style={{ width: 42, height: 25, borderRadius: 999, background: on ? 'var(--green-act)' : 'var(--surface-2)', border: `1px solid ${on ? 'var(--green-act)' : 'var(--border)'}`, position: 'relative', flexShrink: 0, transition: 'all .15s' }}>
-      <div style={{ position: 'absolute', top: 2, left: on ? 19 : 2, width: 19, height: 19, borderRadius: '50%', background: '#fff', transition: 'left .15s' }} />
+    <div
+      className="relative h-[25px] w-[42px] shrink-0 rounded-full border transition-all"
+      style={{ background: on ? 'var(--green-act)' : 'var(--surface-2)', borderColor: on ? 'var(--green-act)' : 'var(--border)' }}
+    >
+      <div className="absolute top-0.5 h-[19px] w-[19px] rounded-full bg-white transition-[left]" style={{ left: on ? 19 : 2 }} />
     </div>
   );
 }

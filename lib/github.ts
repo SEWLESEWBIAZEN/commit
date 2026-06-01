@@ -92,7 +92,42 @@ export async function listRecentCommits(
     message: c.commit.message.split('\n')[0],
     authoredAt: c.commit.author.date,
     author: c.author?.login ?? null,
+    repo,
   }));
+}
+
+// Recent commits merged across several repos, newest first, each tagged with
+// its repo. A failing repo is skipped rather than failing the whole feed.
+export async function listRecentCommitsMulti(
+  repos: string[],
+  opts: GhOpts,
+  perPageEach = 8,
+): Promise<RepoCommit[]> {
+  const results = await Promise.all(
+    repos.map((r) => listRecentCommits(r, opts, perPageEach).catch(() => [] as RepoCommit[])),
+  );
+  return results
+    .flat()
+    .sort((a, b) => new Date(b.authoredAt).getTime() - new Date(a.authoredAt).getTime());
+}
+
+// Latest push across several repos: returns the repo with the most recent
+// commit by `login` since `sinceISO`, or null if none pushed.
+export async function latestPushAcrossRepos(
+  repos: string[],
+  sinceISO: string,
+  login: string,
+  opts: GhOpts,
+): Promise<(LatestPush & { repo: string }) | null> {
+  const found = await Promise.all(
+    repos.map(async (r) => {
+      const p = await latestPushToday(r, sinceISO, login, opts).catch(() => null);
+      return p ? { ...p, repo: r } : null;
+    }),
+  );
+  return found
+    .filter((p): p is LatestPush & { repo: string } => p != null)
+    .sort((a, b) => new Date(b.authoredAt).getTime() - new Date(a.authoredAt).getTime())[0] ?? null;
 }
 
 // All commit timestamps in a [since, until) window, paginated. For the monthly

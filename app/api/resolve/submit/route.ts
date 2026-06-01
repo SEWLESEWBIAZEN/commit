@@ -11,19 +11,22 @@ import { buildMoodContext, type MoodSample } from '@/lib/mood';
 export async function POST(request: NextRequest) {
   const ctx = await getContext();
   if (!ctx) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  if (!ctx.repo || !ctx.token) {
+  if (ctx.repos.length === 0 || !ctx.token) {
     return NextResponse.json({ error: 'github_not_connected' }, { status: 400 });
   }
 
-  const { commitment_id, commit_sha, question, answer } = (await request.json()) as {
+  const { commitment_id, commit_sha, repo, question, answer } = (await request.json()) as {
     commitment_id?: string;
     commit_sha?: string;
+    repo?: string;
     question?: string;
     answer?: string;
   };
   if (!commitment_id || !commit_sha || !question || !answer?.trim()) {
     return NextResponse.json({ error: 'missing_fields' }, { status: 400 });
   }
+  // Use the repo the push was on; validate it's one the user tracks.
+  const targetRepo = repo && ctx.repos.includes(repo) ? repo : ctx.repo!;
 
   try {
     const supabase = await createClient();
@@ -43,7 +46,7 @@ export async function POST(request: NextRequest) {
       .returns<MoodSample[]>();
     const moodContext = buildMoodContext(recent ?? []);
 
-    const stat = await commitDiffStat(ctx.repo, commit_sha, { token: ctx.token });
+    const stat = await commitDiffStat(targetRepo, commit_sha, { token: ctx.token });
     const verdict = await evaluateAnswer({
       commitmentBody: commitment?.body ?? '',
       diff: stat.patch,
@@ -62,7 +65,7 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: ctx.userId,
         commitment_id,
-        repo: ctx.repo,
+        repo: targetRepo,
         commit_sha,
         additions: stat.additions,
         deletions: stat.deletions,

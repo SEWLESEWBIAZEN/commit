@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getContext } from '@/lib/server-context';
 import { createClient } from '@/lib/supabase/server';
-import { latestPushToday, commitDiffStat } from '@/lib/github';
+import { latestPushAcrossRepos, commitDiffStat } from '@/lib/github';
 import { todayInTz, startOfTodayUtc } from '@/lib/date';
 import { generateQuestion } from '@/lib/coach';
 import type { Commitment } from '@/lib/types';
@@ -10,7 +10,7 @@ import type { Commitment } from '@/lib/types';
 export async function POST(_request: NextRequest) {
   const ctx = await getContext();
   if (!ctx) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  if (!ctx.repo || !ctx.token || !ctx.login) {
+  if (ctx.repos.length === 0 || !ctx.token || !ctx.login) {
     return NextResponse.json({ error: 'github_not_connected' }, { status: 400 });
   }
 
@@ -27,15 +27,15 @@ export async function POST(_request: NextRequest) {
   if (!commitment) return NextResponse.json({ error: 'no_commitment' }, { status: 400 });
 
   try {
-    const latest = await latestPushToday(
-      ctx.repo,
+    const latest = await latestPushAcrossRepos(
+      ctx.repos,
       startOfTodayUtc(ctx.profile.timezone).toISOString(),
       ctx.login,
       { token: ctx.token },
     );
     if (!latest) return NextResponse.json({ error: 'no_push' }, { status: 400 });
 
-    const stat = await commitDiffStat(ctx.repo, latest.commit_sha, { token: ctx.token });
+    const stat = await commitDiffStat(latest.repo, latest.commit_sha, { token: ctx.token });
     const question = await generateQuestion({
       commitmentBody: commitment.body,
       diff: stat.patch,
@@ -44,6 +44,7 @@ export async function POST(_request: NextRequest) {
     return NextResponse.json({
       commitment_id: commitment.id,
       commit_sha: latest.commit_sha,
+      repo: latest.repo,
       question,
       additions: stat.additions,
       deletions: stat.deletions,

@@ -49,6 +49,7 @@ function useIsDesktop(breakpoint = 1024): boolean {
 interface Me {
   authed: boolean;
   repo: string | null;
+  repos?: string[];
   hasCommitments: boolean;
   streak: number;
   login: string | null;
@@ -61,9 +62,9 @@ const JSON_HEADERS = { 'Content-Type': 'application/json' };
 // ── Centered mobile shell ─────────────────────────────────────
 function Shell({ children, nav }: { children: React.ReactNode; nav?: React.ReactNode }) {
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'var(--bg)', display: 'flex', justifyContent: 'center' }}>
-      <div style={{ width: '100%', maxWidth: 440, height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg)', overflow: 'hidden' }}>
-        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>{children}</div>
+    <div className="fixed inset-0 flex justify-center bg-bg">
+      <div className="flex h-full w-full max-w-[440px] flex-col overflow-hidden bg-bg">
+        <div className="flex min-h-0 flex-1 flex-col">{children}</div>
         {nav}
       </div>
     </div>
@@ -73,10 +74,10 @@ function Shell({ children, nav }: { children: React.ReactNode; nav?: React.React
 function Splash({ label = 'loading' }: { label?: string }) {
   return (
     <Shell>
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--hint)' }}>
-        <span className="mono" style={{ fontSize: 13, display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-          <span style={{ color: 'var(--green)' }}>$</span>{label}
-          <span style={{ display: 'inline-flex', gap: 4, color: 'var(--blue)' }}><span className="cm-dot" /><span className="cm-dot" /><span className="cm-dot" /></span>
+      <div className="flex flex-1 items-center justify-center text-hint">
+        <span className="mono inline-flex items-center gap-1.5 text-[13px]">
+          <span className="text-green">$</span>{label}
+          <span className="inline-flex gap-1 text-blue"><span className="cm-dot" /><span className="cm-dot" /><span className="cm-dot" /></span>
         </span>
       </div>
     </Shell>
@@ -121,6 +122,7 @@ export default function App() {
   const [vContent, setVContent] = useState<VerdictPayload | null>(null);
   const [question, setQuestion] = useState('');
   const [commitSha, setCommitSha] = useState('');
+  const [resolveRepo, setResolveRepo] = useState('');
   const [commitmentId, setCommitmentId] = useState('');
   const [resolutionId, setResolutionId] = useState<string | null>(null);
   const [answer, setAnswer] = useState('');
@@ -300,6 +302,7 @@ export default function App() {
       if (!res.ok) { setErr(errorLabel(d.error)); return; }
       setQuestion(d.question);
       setCommitSha(d.commit_sha);
+      setResolveRepo(d.repo ?? '');
       setCommitmentId(d.commitment_id);
       setQStats({ add: d.additions, del: d.deletions, files: d.files });
       setAnswer('');
@@ -317,7 +320,7 @@ export default function App() {
     const res = await fetch('/api/resolve/submit', {
       method: 'POST',
       headers: JSON_HEADERS,
-      body: JSON.stringify({ commitment_id: commitmentId, commit_sha: commitSha, question, answer }),
+      body: JSON.stringify({ commitment_id: commitmentId, commit_sha: commitSha, repo: resolveRepo, question, answer }),
     });
     const d = (await res.json()) as VerdictPayload & { resolution_id: string | null; error?: string };
     if (!res.ok) { setErr(errorLabel(d.error)); setPhase('question'); return; }
@@ -414,6 +417,7 @@ export default function App() {
     });
     setQuestion(r.question ?? '');
     setAnswer(r.answer ?? '');
+    setResolveRepo(r.repo ?? '');
     setQStats({ add: r.additions, del: r.deletions, files: r.files });
     setPhase('verdict');
     setOverlay('resolve');
@@ -440,10 +444,10 @@ export default function App() {
 
   if (!me) return <Splash label="signing in" />;
 
-  if (!me.repo) {
+  if (!me.repos || me.repos.length === 0) {
     return (
       <Shell>
-        <RepoSelect onSelected={(repo) => setMe({ ...me, repo })} />
+        <RepoSelect onSelected={(repos) => setMe({ ...me, repos, repo: repos[0] ?? null })} />
         <ErrorToast err={err} />
       </Shell>
     );
@@ -457,7 +461,7 @@ export default function App() {
           onChange={setCommitVal}
           type={ctype}
           onType={setCtype}
-          repo={me.repo}
+          repo={me.repo ?? me.repos?.[0] ?? undefined}
           suggestion=""
           beginner
           loading={sealing}
@@ -476,7 +480,7 @@ export default function App() {
           phase={phase}
           verdict={verdict}
           streak={today?.streak ?? me.streak}
-          repo={today?.repo ?? me.repo ?? undefined}
+          repo={resolveRepo || today?.repo || me.repo || undefined}
           add={qStats.add}
           del={qStats.del}
           files={qStats.files}
@@ -532,6 +536,7 @@ export default function App() {
         avatar={me.avatar}
         timezone={me.timezone}
         repo={me.repo}
+        repos={me.repos}
         disconnecting={disconnecting}
         onDisconnect={disconnect}
         settings={settings}
@@ -576,7 +581,7 @@ export default function App() {
   if (isDesktop) {
     const mainMax = tab === 'insights' || tab === 'insightsEmpty' ? 1040 : tab === 'settings' ? 640 : 600;
     return (
-      <div style={{ display: 'flex', height: '100vh', background: 'var(--bg)', overflow: 'hidden' }}>
+      <div className="flex h-screen overflow-hidden bg-bg">
         <SideNav
           active={tab === 'insightsEmpty' ? 'insights' : tab}
           onNav={(t: string) => setTab(t as NavTab)}
@@ -586,8 +591,8 @@ export default function App() {
           theme={theme}
           onSetTheme={setTheme}
         />
-        <main style={{ flex: 1, minWidth: 0, height: '100vh', display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
-          <div style={{ width: '100%', maxWidth: mainMax, height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <main className="flex h-screen min-w-0 flex-1 justify-center overflow-hidden">
+          <div className="flex h-full w-full flex-col" style={{ maxWidth: mainMax }}>
             {body}
           </div>
         </main>
@@ -611,8 +616,8 @@ export default function App() {
 // Centered modal card for overlays (Resolve / Commit) on desktop.
 function CenterModal({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(1,4,9,0.62)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ width: '100%', maxWidth: 460, height: 'min(90vh, 880px)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden', boxShadow: '0 30px 90px rgba(0,0,0,0.6)' }}>
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-[rgba(1,4,9,0.62)] p-6 backdrop-blur-[2px]">
+      <div className="h-[min(90vh,880px)] w-full max-w-[460px] overflow-hidden rounded-[20px] border border-border bg-bg shadow-[0_30px_90px_rgba(0,0,0,0.6)]">
         {children}
       </div>
     </div>
@@ -622,9 +627,9 @@ function CenterModal({ children }: { children: React.ReactNode }) {
 // Inline loading filler (used inside the shell/content area, no full-screen wrapper).
 function LoadingPane({ label }: { label: string }) {
   return (
-    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--hint)' }}>
-      <span className="mono" style={{ fontSize: 13, display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-        <span style={{ display: 'inline-flex', gap: 4, color: 'var(--blue)' }}><span className="cm-dot" /><span className="cm-dot" /><span className="cm-dot" /></span>
+    <div className="flex flex-1 items-center justify-center text-hint">
+      <span className="mono inline-flex items-center gap-2 text-[13px]">
+        <span className="inline-flex gap-1 text-blue"><span className="cm-dot" /><span className="cm-dot" /><span className="cm-dot" /></span>
         {label}
       </span>
     </div>
@@ -634,9 +639,9 @@ function LoadingPane({ label }: { label: string }) {
 // ── full-screen "reading your diff" while the first question is generated ──
 function Preparing() {
   return (
-    <div style={{ position: 'absolute', inset: 0, background: 'rgba(1,4,9,0.82)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300 }}>
-      <span className="mono" style={{ color: 'var(--muted)', fontSize: 13, display: 'inline-flex', gap: 10, alignItems: 'center' }}>
-        <span style={{ display: 'inline-flex', gap: 4, color: 'var(--blue)' }}><span className="cm-dot" /><span className="cm-dot" /><span className="cm-dot" /></span>
+    <div className="absolute inset-0 z-[300] flex items-center justify-center bg-[rgba(1,4,9,0.82)]">
+      <span className="mono inline-flex items-center gap-2.5 text-[13px] text-muted">
+        <span className="inline-flex gap-1 text-blue"><span className="cm-dot" /><span className="cm-dot" /><span className="cm-dot" /></span>
         reading your diff
       </span>
     </div>
@@ -646,10 +651,10 @@ function Preparing() {
 function ConfigNeeded() {
   return (
     <Shell>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 16, padding: '0 28px' }}>
-        <div className="mono" style={{ fontSize: 13, color: 'var(--amber)' }}>$ setup required</div>
-        <div style={{ fontSize: 22, lineHeight: 1.25, color: 'var(--text)' }}>Add your keys to <span className="mono" style={{ color: 'var(--blue)' }}>.env.local</span></div>
-        <div style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.55 }}>
+      <div className="flex flex-1 flex-col justify-center gap-4 px-7">
+        <div className="mono text-[13px] text-amber">$ setup required</div>
+        <div className="text-[22px] leading-[1.25] text-text">Add your keys to <span className="mono text-blue">.env.local</span></div>
+        <div className="text-sm leading-[1.55] text-muted">
           Set <span className="mono">NEXT_PUBLIC_SUPABASE_URL</span>, <span className="mono">NEXT_PUBLIC_SUPABASE_ANON_KEY</span>,
           <span className="mono"> SUPABASE_SERVICE_ROLE_KEY</span> and <span className="mono">ANTHROPIC_API_KEY</span>, then restart the dev server. See the README for the full setup.
         </div>
@@ -661,7 +666,7 @@ function ConfigNeeded() {
 function ErrorToast({ err }: { err: string | null }) {
   if (!err) return null;
   return (
-    <div style={{ position: 'absolute', bottom: 24, left: 16, right: 16, background: 'var(--red-fill)', border: '1px solid var(--red)', borderRadius: 10, padding: '12px 14px', color: 'var(--text)', fontSize: 13.5, zIndex: 400 }}>
+    <div className="absolute bottom-6 left-4 right-4 z-[400] rounded-[10px] border border-red bg-red-fill px-[14px] py-3 text-[13.5px] text-text">
       {err}
     </div>
   );

@@ -85,13 +85,15 @@ export interface PushInfo {
   deletions: number;
   files: number;
   minutesAgo: number;
+  repo: string; // which tracked repo this push was to
 }
 
 export interface TodayResponse {
   state: TodayState;
   streak: number;
   prevStreak: number;
-  repo: string | null;
+  repo: string | null;     // push repo (ready) or primary
+  repos: string[];         // all tracked repos
   commitment: Commitment | null;
   push: PushInfo | null;
   resolution: Resolution | null;
@@ -104,6 +106,7 @@ export interface RepoCommit {
   message: string; // first line only
   authoredAt: string;
   author: string | null;
+  repo: string; // "owner/name" the commit belongs to
 }
 
 export interface AdviceItem {

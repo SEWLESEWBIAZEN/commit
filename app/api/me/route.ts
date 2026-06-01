@@ -17,6 +17,7 @@ export async function GET() {
   return NextResponse.json({
     authed: true,
     repo: ctx.repo,
+    repos: ctx.repos,
     hasCommitments: (count ?? 0) > 0,
     streak: ctx.profile.current_streak,
     login: ctx.login,

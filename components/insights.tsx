@@ -14,6 +14,16 @@ function bgFor(v: number) {
   return GH_GREENS[Math.min(v, 4) - 1];
 }
 
+function Legend() {
+  return (
+    <div className="mt-2.5 flex items-center justify-end gap-1.5">
+      <span className="mono text-[10px] text-hint">less</span>
+      {[1, 2, 3, 4].map(v => <div key={v} className="h-2.5 w-2.5 rounded-[2px]" style={{ background: GH_GREENS[v - 1] }} />)}
+      <span className="mono text-[10px] text-hint">more</span>
+    </div>
+  );
+}
+
 function Heatmap({ levels, weeks = 12 }: { levels?: number[]; weeks?: number }) {
   // Fall back to a sample pattern if no real data is passed.
   let flat = levels;
@@ -29,20 +39,16 @@ function Heatmap({ levels, weeks = 12 }: { levels?: number[]; weeks?: number }) 
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 3 }}>
+      <div className="flex gap-[3px]">
         {cells.map((col, w) => (
-          <div key={w} style={{ display: 'flex', flexDirection: 'column', gap: 3, flex: 1 }}>
+          <div key={w} className="flex flex-1 flex-col gap-[3px]">
             {col.map((v, d) => (
-              <div key={d} style={{ width: '100%', aspectRatio: '1', borderRadius: 2.5, background: bgFor(v) }} />
+              <div key={d} className="aspect-square w-full rounded-[2.5px]" style={{ background: bgFor(v) }} />
             ))}
           </div>
         ))}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, justifyContent: 'flex-end' }}>
-        <span className="mono" style={{ fontSize: 10, color: 'var(--hint)' }}>less</span>
-        {[1, 2, 3, 4].map(v => <div key={v} style={{ width: 10, height: 10, borderRadius: 2, background: GH_GREENS[v - 1] }} />)}
-        <span className="mono" style={{ fontSize: 10, color: 'var(--hint)' }}>more</span>
-      </div>
+      <Legend />
     </div>
   );
 }
@@ -56,16 +62,14 @@ function MoodBars({ mood, fill = '#26A641' }: { mood?: MoodPoint[]; fill?: strin
       committed: [1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 1][i] === 1,
     }));
   return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 46 }}>
+    <div className="flex h-[46px] items-end gap-1">
       {data.map((m, i) => (
         <div
           key={i}
+          className="flex-1 rounded-[2px] transition-[height]"
           style={{
-            flex: 1,
-            borderRadius: 2,
             background: m.value > 0 ? (m.committed ? fill : 'var(--hint)') : 'var(--border)',
             height: `${Math.max(m.value / 5, 0.08) * 100}%`,
-            transition: 'height .3s',
           }}
         />
       ))}
@@ -77,7 +81,7 @@ function MoodBars({ mood, fill = '#26A641' }: { mood?: MoodPoint[]; fill?: strin
 function ScaleBadge({ label, value, color }: { label: string; value: number | null; color: string }) {
   if (!value) return null;
   return (
-    <span className="mono" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10.5, color }}>
+    <span className="mono inline-flex items-center gap-1 text-[10.5px]" style={{ color }}>
       {label} {value}/5
     </span>
   );
@@ -93,19 +97,19 @@ function formatRefDate(iso: string): string {
 
 function Reflections({ entries }: { entries: EmotionLogEntry[] }) {
   if (!entries || entries.length === 0) {
-    return <div style={{ fontSize: 13, color: 'var(--hint)', lineHeight: 1.5 }}>Notes from your check-ins will collect here.</div>;
+    return <div className="text-[13px] leading-normal text-hint">Notes from your check-ins will collect here.</div>;
   }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div className="flex flex-col gap-2.5">
       {entries.map((e, i) => (
-        <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: e.note ? 8 : 0 }}>
-            <span className="mono" style={{ fontSize: 11, color: 'var(--hint)' }}>{formatRefDate(e.date)}</span>
-            <span style={{ flex: 1 }} />
+        <div key={i} className="rounded border border-border bg-surface p-[14px]">
+          <div className="flex items-center gap-2.5" style={{ marginBottom: e.note ? 8 : 0 }}>
+            <span className="mono text-[11px] text-hint">{formatRefDate(e.date)}</span>
+            <span className="flex-1" />
             <ScaleBadge label="mood" value={e.mood} color="var(--blue)" />
             <ScaleBadge label="energy" value={e.energy} color="var(--green)" />
           </div>
-          {e.note && <div style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.55 }}>{e.note}</div>}
+          {e.note && <div className="text-sm leading-[1.55] text-muted">{e.note}</div>}
         </div>
       ))}
     </div>
@@ -117,13 +121,13 @@ interface AdviceCardProps { tone: 'amber' | 'green'; category: string; text: str
 function AdviceCard({ tone, category, text, acked, onAck }: AdviceCardProps) {
   const color = tone === 'amber' ? 'var(--amber)' : 'var(--green)';
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: 14 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+    <div className="rounded border border-border bg-surface p-[14px]">
+      <div className="mb-2 flex items-center gap-1.5">
         <Icon name="spark" size={15} style={{ color }} />
-        <span className="mono" style={{ fontSize: 10.5, color, letterSpacing: '0.04em' }}>{category}</span>
+        <span className="mono text-[10.5px] tracking-[0.04em]" style={{ color }}>{category}</span>
       </div>
-      <div style={{ fontSize: 13.5, color: 'var(--muted)', lineHeight: 1.55 }}>{text}</div>
-      <button onClick={onAck} className="mono" style={{ background: 'none', border: 0, padding: 0, marginTop: 10, fontSize: 11.5, cursor: 'pointer', color: acked ? 'var(--green)' : 'var(--blue)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+      <div className="text-[13.5px] leading-[1.55] text-muted">{text}</div>
+      <button onClick={onAck} className="mono mt-2.5 inline-flex items-center gap-[5px] border-0 bg-transparent p-0 text-[11.5px]" style={{ color: acked ? 'var(--green)' : 'var(--blue)' }}>
         {acked ? <><Icon name="check" size={12} sw={2.4} />acknowledged</> : 'acknowledge'}
       </button>
     </div>
@@ -174,23 +178,24 @@ function MonthGraph() {
     <button
       onClick={dir === 'prev' ? prev : next}
       disabled={disabled}
-      style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 7, width: 30, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: disabled ? 'default' : 'pointer', color: disabled ? 'var(--hint)' : 'var(--muted)', opacity: disabled ? 0.4 : 1 }}
+      className="flex h-7 w-[30px] items-center justify-center rounded-[7px] border border-border bg-surface-2"
+      style={{ cursor: disabled ? 'default' : 'pointer', color: disabled ? 'var(--hint)' : 'var(--muted)', opacity: disabled ? 0.4 : 1 }}
     >
       <Icon name={dir === 'prev' ? 'chevL' : 'chevron'} size={16} />
     </button>
   );
 
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14 }}>
-        <div style={{ flex: 1, fontSize: 14.5, fontWeight: 500, color: 'var(--text)' }}>{label}</div>
-        <span className="mono" style={{ fontSize: 11, color: 'var(--hint)', marginRight: 10 }}>{loading ? '…' : `${total} commits`}</span>
-        <div style={{ display: 'flex', gap: 6 }}>{navBtn('prev', false)}{navBtn('next', atCurrent)}</div>
+    <div className="rounded border border-border bg-surface p-4">
+      <div className="mb-[14px] flex items-center">
+        <div className="flex-1 text-[14.5px] font-medium text-text">{label}</div>
+        <span className="mono mr-2.5 text-[11px] text-hint">{loading ? '…' : `${total} commits`}</span>
+        <div className="flex gap-1.5">{navBtn('prev', false)}{navBtn('next', atCurrent)}</div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+      <div className="grid grid-cols-7 gap-1">
         {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-          <div key={i} className="mono" style={{ textAlign: 'center', fontSize: 10, color: 'var(--hint)', marginBottom: 2 }}>{d}</div>
+          <div key={i} className="mono mb-0.5 text-center text-[10px] text-hint">{d}</div>
         ))}
         {cells.map((day, i) => {
           if (day == null) return <div key={`b${i}`} />;
@@ -203,11 +208,10 @@ function MonthGraph() {
             <div
               key={key}
               title={`${c} commit${c === 1 ? '' : 's'} · ${key}`}
+              className="flex aspect-square items-center justify-center rounded-[5px] font-mono text-[11px]"
               style={{
-                aspectRatio: '1', borderRadius: 5, background: bgFor(v),
+                background: bgFor(v),
                 border: isToday ? '1px solid var(--blue)' : '1px solid transparent',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'var(--font-mono)', fontSize: 11,
                 color: bright ? '#0D1117' : v === 0 ? 'var(--hint)' : 'var(--muted)',
               }}
             >
@@ -217,11 +221,7 @@ function MonthGraph() {
         })}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 12, justifyContent: 'flex-end' }}>
-        <span className="mono" style={{ fontSize: 10, color: 'var(--hint)' }}>less</span>
-        {[1, 2, 3, 4].map((v) => <div key={v} style={{ width: 10, height: 10, borderRadius: 2, background: GH_GREENS[v - 1] }} />)}
-        <span className="mono" style={{ fontSize: 10, color: 'var(--hint)' }}>more</span>
-      </div>
+      <Legend />
     </div>
   );
 }
@@ -230,23 +230,25 @@ function MonthGraph() {
 function CommitFeed({ commits, loading }: { commits?: RepoCommit[]; loading?: boolean }) {
   if (loading && (!commits || commits.length === 0)) {
     return (
-      <div className="mono" style={{ fontSize: 12.5, color: 'var(--hint)', display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-        <span style={{ display: 'inline-flex', gap: 4, color: 'var(--blue)' }}><span className="cm-dot" /><span className="cm-dot" /><span className="cm-dot" /></span>
+      <div className="mono inline-flex items-center gap-2 text-[12.5px] text-hint">
+        <span className="inline-flex gap-1 text-blue"><span className="cm-dot" /><span className="cm-dot" /><span className="cm-dot" /></span>
         loading commits
       </div>
     );
   }
   if (!commits || commits.length === 0) {
-    return <div style={{ fontSize: 13, color: 'var(--hint)', lineHeight: 1.5 }}>No commits found in your selected repo yet.</div>;
+    return <div className="text-[13px] leading-normal text-hint">No commits found in your selected repo yet.</div>;
   }
   return (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: '4px 14px' }}>
+    <div className="rounded border border-border bg-surface px-[14px] py-1">
       {commits.map((c, i) => (
-        <div key={c.sha} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '11px 0', borderTop: i === 0 ? 'none' : '1px solid var(--border-soft)' }}>
+        <div key={c.sha} className={`flex items-center gap-[11px] py-[11px] ${i === 0 ? '' : 'border-t border-border-soft'}`}>
           <Icon name="commit" size={16} sw={1.8} style={{ color: 'var(--hint)', flexShrink: 0 }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13.5, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.message}</div>
-            <div className="mono" style={{ fontSize: 11, color: 'var(--hint)', marginTop: 2 }}>{c.sha.slice(0, 7)} · {relativeTime(c.authoredAt)}</div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[13.5px] text-text">{c.message}</div>
+            <div className="mono mt-0.5 truncate text-[11px] text-hint">
+              <span className="text-muted">{c.repo.split('/')[1] ?? c.repo}</span> · {c.sha.slice(0, 7)} · {relativeTime(c.authoredAt)}
+            </div>
           </div>
         </div>
       ))}
@@ -257,9 +259,9 @@ function CommitFeed({ commits, loading }: { commits?: RepoCommit[]; loading?: bo
 // ── Stat card ──────────────────────────────────────────────────
 function StatCard({ label, value, color = 'var(--text)' }: { label: string; value: string; color?: string }) {
   return (
-    <div style={{ flex: 1, background: 'var(--surface)', borderRadius: 'var(--r)', padding: '10px 12px', border: '1px solid var(--border)' }}>
-      <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>{label}</div>
-      <div className="mono" style={{ fontSize: 22, fontWeight: 500, color }}>{value}</div>
+    <div className="flex-1 rounded border border-border bg-surface px-3 py-2.5">
+      <div className="mb-1 text-[11px] text-muted">{label}</div>
+      <div className="mono text-[22px] font-medium" style={{ color }}>{value}</div>
     </div>
   );
 }
@@ -274,11 +276,11 @@ export function InsightsScreen({ data, commits, loading, commitsLoading, wide, o
   // First load: show a spinner rather than the "not enough days" placeholder.
   if (loading && !data) {
     return (
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
-        <div style={{ padding: '10px 20px', fontSize: 17, fontWeight: 500, flexShrink: 0 }}>Insights</div>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--hint)' }}>
-          <span className="mono" style={{ fontSize: 13, display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-            <span style={{ display: 'inline-flex', gap: 4, color: 'var(--blue)' }}><span className="cm-dot" /><span className="cm-dot" /><span className="cm-dot" /></span>
+      <div className="flex h-full flex-col bg-bg">
+        <div className="shrink-0 px-5 py-2.5 text-[17px] font-medium">Insights</div>
+        <div className="flex flex-1 items-center justify-center text-hint">
+          <span className="mono inline-flex items-center gap-2 text-[13px]">
+            <span className="inline-flex gap-1 text-blue"><span className="cm-dot" /><span className="cm-dot" /><span className="cm-dot" /></span>
             loading insights
           </span>
         </div>
@@ -289,21 +291,23 @@ export function InsightsScreen({ data, commits, loading, commitsLoading, wide, o
   // Empty until there's at least one kept day.
   if (!data || data.daysCounted === 0) {
     return (
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
-        <div style={{ padding: '10px 20px', fontSize: 17, fontWeight: 500, flexShrink: 0 }}>Insights</div>
-        <div className="cm-scroll" style={{ flex: 1, padding: '8px 20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: 22, textAlign: 'center' }}>
-            <div style={{ display: 'flex', gap: 3, justifyContent: 'center', marginBottom: 16 }}>
-              {Array.from({ length: 9 }).map((_, i) => (
-                <div key={i} style={{ width: 12, height: 12, borderRadius: 2.5, background: i === 0 ? '#26A641' : 'var(--cell)', border: i === 0 ? 'none' : '1px solid var(--border-soft)' }} />
-              ))}
+      <div className="flex h-full flex-col bg-bg">
+        <div className="shrink-0 px-5 py-2.5 text-[17px] font-medium">Insights</div>
+        <div className="cm-scroll flex flex-1 flex-col gap-4 overflow-y-auto px-5 pb-6 pt-2">
+          <div className="flex flex-col sm:flex-row gap-2.5 w-full">
+            <div className="rounded border border-border bg-surface p-[22px] text-center flex-1">
+              <div className="mb-4 flex justify-center gap-[3px]">
+                {Array.from({ length: 9 }).map((_, i) => (
+                  <div key={i} className="h-3 w-3 rounded-[2.5px]" style={{ background: i === 0 ? '#26A641' : 'var(--cell)', border: i === 0 ? 'none' : '1px solid var(--border-soft)' }} />
+                ))}
+              </div>
+              <div className="text-base text-text">Not enough days yet.</div>
+              <div className="mx-auto mt-2  text-[13.5px] leading-normal text-muted">Patterns appear once you start keeping commitments — resolve a day and the coach starts taking notes.</div>
             </div>
-            <div style={{ fontSize: 16, color: 'var(--text)' }}>Not enough days yet.</div>
-            <div style={{ fontSize: 13.5, color: 'var(--muted)', marginTop: 8, lineHeight: 1.5, maxWidth: 240, margin: '8px auto 0' }}>Patterns appear once you start keeping commitments — resolve a day and the coach starts taking notes.</div>
-          </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <StatCard label="days counted" value={String(data?.daysCounted ?? 0)} />
-            <StatCard label="commit rate" value={rate(data?.commitRate)} />
+            <div className="flex flex-col gap-2.5">
+              <StatCard label="days counted" value={String(data?.daysCounted ?? 0)} />
+              <StatCard label="commit rate" value={rate(data?.commitRate)} />
+            </div>
           </div>
           <div>
             <SectionLabel style={{ marginBottom: 10 }}>commits this month</SectionLabel>
@@ -320,12 +324,12 @@ export function InsightsScreen({ data, commits, loading, commitsLoading, wide, o
   }
 
   const statBlock = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ display: 'flex', gap: 10 }}>
+    <div className="flex flex-col gap-2.5">
+      <div className="flex gap-2.5">
         <StatCard label="current streak" value={String(data.currentStreak)} color="var(--green)" />
         <StatCard label="commit rate" value={rate(data.commitRate)} />
       </div>
-      <div style={{ display: 'flex', gap: 10 }}>
+      <div className="flex gap-2.5">
         <StatCard label="longest streak" value={String(data.longestStreak)} />
         <StatCard label="days counted" value={String(data.daysCounted)} />
       </div>
@@ -338,23 +342,23 @@ export function InsightsScreen({ data, commits, loading, commitsLoading, wide, o
     </div>
   );
   const heatmapBlock = (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: 16 }}>
+    <div className="rounded border border-border bg-surface p-4">
       <SectionLabel style={{ marginBottom: 12 }}>commitments kept · last 12 weeks</SectionLabel>
       <Heatmap levels={data.heatmap} />
     </div>
   );
   const moodBlock = (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: 16 }}>
+    <div className="rounded border border-border bg-surface p-4">
       <SectionLabel style={{ marginBottom: 12 }}>
-        mood · last 14 days · <span style={{ color: 'var(--green)' }}>green = committed</span>
+        mood · last 14 days · <span className="text-green">green = committed</span>
       </SectionLabel>
       <MoodBars mood={data.mood} fill="#26A641" />
     </div>
   );
   const energyBlock = (
-    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: 16 }}>
+    <div className="rounded border border-border bg-surface p-4">
       <SectionLabel style={{ marginBottom: 12 }}>
-        energy · last 14 days · <span style={{ color: 'var(--blue)' }}>blue = committed</span>
+        energy · last 14 days · <span className="text-blue">blue = committed</span>
       </SectionLabel>
       <MoodBars mood={data.energy} fill="#1F6FEB" />
     </div>
@@ -375,11 +379,11 @@ export function InsightsScreen({ data, commits, loading, commitsLoading, wide, o
     <div>
       <SectionLabel style={{ marginBottom: 10 }}>from your coach</SectionLabel>
       {data.advice.length === 0 ? (
-        <div style={{ fontSize: 13, color: 'var(--hint)', lineHeight: 1.5 }}>
+        <div className="text-[13px] leading-normal text-hint">
           Lessons from your resolves will collect here.
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="flex flex-col gap-2.5">
           {data.advice.map((a: AdviceItem, i) => (
             <AdviceCard key={i} tone={a.tone} category={a.category} text={a.text} acked={!!acked[i]} onAck={() => toggle(i)} />
           ))}
@@ -389,19 +393,19 @@ export function InsightsScreen({ data, commits, loading, commitsLoading, wide, o
   );
 
   const col = (children: React.ReactNode) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>{children}</div>
+    <div className="flex flex-col gap-[18px]">{children}</div>
   );
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', padding: '10px 20px', flexShrink: 0 }}>
-        <div style={{ fontSize: 17, fontWeight: 500, flex: 1 }}>Insights</div>
-        <span className="mono" style={{ fontSize: 12, color: 'var(--hint)' }}>{data.totalDays} days</span>
+    <div className="flex h-full flex-col bg-bg">
+      <div className="flex shrink-0 items-center px-5 py-2.5">
+        <div className="flex-1 text-[17px] font-medium">Insights</div>
+        <span className="mono text-xs text-hint">{data.totalDays} days</span>
       </div>
 
-      <div className="cm-scroll" style={{ flex: 1, overflowY: 'auto', padding: '4px 20px 24px' }}>
+      <div className="cm-scroll flex-1 overflow-y-auto px-5 pb-6 pt-1">
         {wide ? (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, alignItems: 'start' }}>
+          <div className="grid grid-cols-2 items-start gap-[18px]">
             {col(<>{statBlock}{monthBlock}{heatmapBlock}{commitsBlock}</>)}
             {col(<>{moodBlock}{energyBlock}{reflectionsBlock}{adviceBlock}</>)}
           </div>

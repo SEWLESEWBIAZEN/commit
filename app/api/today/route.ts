@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getContext } from '@/lib/server-context';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { latestPushToday, commitDiffStat } from '@/lib/github';
+import { latestPushAcrossRepos, commitDiffStat } from '@/lib/github';
 import { todayInTz, startOfTodayUtc, minutesSince } from '@/lib/date';
 import { notifyMissed } from '@/lib/notify';
 import type { Commitment, Resolution, TodayResponse } from '@/lib/types';
@@ -18,7 +18,8 @@ export async function GET() {
   let streak = ctx.profile.current_streak;
   const prevStreak = ctx.profile.current_streak;
   const beginner = streak < 7;
-  const repo = ctx.repo;
+  const repos = ctx.repos;
+  let repo = ctx.repo; // becomes the push repo once a push is detected
   const partnerEmail = ctx.profile.partner_email;
 
   // Today's commitment (the one due today).
@@ -65,6 +66,7 @@ export async function GET() {
       streak: 0,
       prevStreak,
       repo,
+      repos,
       commitment: todays ?? null,
       push: null,
       resolution: null,
@@ -81,6 +83,7 @@ export async function GET() {
       streak,
       prevStreak,
       repo,
+      repos,
       commitment: null,
       push: null,
       resolution: null,
@@ -106,6 +109,7 @@ export async function GET() {
       streak,
       prevStreak,
       repo,
+      repos,
       commitment: todays,
       push: null,
       resolution,
@@ -115,18 +119,20 @@ export async function GET() {
     return NextResponse.json(res);
   }
 
-  // Has a commitment, not yet resolved → look for today's push.
+  // Has a commitment, not yet resolved → look for today's push across ALL
+  // tracked repos. The most recent push wins and becomes the repo we resolve.
   let push: TodayResponse['push'] = null;
-  if (repo && ctx.token && ctx.login) {
+  if (repos.length > 0 && ctx.token && ctx.login) {
     try {
-      const latest = await latestPushToday(
-        repo,
+      const latest = await latestPushAcrossRepos(
+        repos,
         startOfTodayUtc(tz).toISOString(),
         ctx.login,
         { token: ctx.token },
       );
       if (latest) {
-        const stat = await commitDiffStat(repo, latest.commit_sha, { token: ctx.token });
+        const stat = await commitDiffStat(latest.repo, latest.commit_sha, { token: ctx.token });
+        repo = latest.repo;
         push = {
           commit_sha: latest.commit_sha,
           commits: latest.commits,
@@ -134,6 +140,7 @@ export async function GET() {
           deletions: stat.deletions,
           files: stat.files,
           minutesAgo: minutesSince(latest.authoredAt),
+          repo: latest.repo,
         };
       }
     } catch {
@@ -147,6 +154,7 @@ export async function GET() {
     streak,
     prevStreak,
     repo,
+    repos,
     commitment: todays,
     push,
     resolution: null,

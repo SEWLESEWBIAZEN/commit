@@ -19,28 +19,34 @@ export function CommitScreen({
   const empty = !value.trim();
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
+    <div className="flex h-full flex-col bg-bg">
       {/* nav */}
-      <div style={{ flexShrink: 0, padding: '12px 20px 0', display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={onBack} style={{ background: 'none', border: 0, color: 'var(--muted)', cursor: 'pointer', padding: 0, display: 'flex', marginLeft: -4 }}>
+      <div className="flex shrink-0 items-center gap-3 px-5 pt-3">
+        <button onClick={onBack} className="-ml-1 flex border-0 bg-transparent p-0 text-muted">
           <Icon name="chevL" size={24} />
         </button>
         <Wordmark />
       </div>
 
       {/* body */}
-      <div className="cm-scroll" style={{ flex: 1, overflowY: 'auto', padding: '22px 20px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+      <div className="cm-scroll flex flex-1 flex-col gap-[22px] overflow-y-auto px-5 py-[22px]">
         <div>
           <SectionLabel>tomorrow&rsquo;s promise</SectionLabel>
-          <div style={{ fontSize: 26, lineHeight: 1.18, marginTop: 12, color: 'var(--text)', letterSpacing: '-0.02em' }}>What will you commit to tomorrow?</div>
+          <div className="mt-3 text-[26px] leading-[1.18] tracking-[-0.02em] text-text">What will you commit to tomorrow?</div>
         </div>
 
         {/* type toggle */}
-        <div style={{ display: 'flex', gap: 8, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: 4 }}>
+        <div className="flex gap-2 rounded border border-border bg-surface p-1">
           {([['build', 'code', 'build code'], ['learn', 'book', 'learn']] as [CommitType, 'code' | 'book', string][]).map(([id, icon, label]) => {
             const on = type === id;
             return (
-              <button key={id} onClick={() => onType?.(id)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: '10px 0', borderRadius: 6, cursor: 'pointer', border: 0, background: on ? 'var(--surface-2)' : 'transparent', color: on ? 'var(--text)' : 'var(--hint)', fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: on ? 500 : 400, boxShadow: on ? 'inset 0 0 0 1px var(--border)' : 'none', transition: 'all .12s' }}>
+              <button
+                key={id}
+                onClick={() => onType?.(id)}
+                className={`flex flex-1 items-center justify-center gap-[7px] rounded-md border-0 py-2.5 text-sm transition-all ${
+                  on ? 'bg-surface-2 text-text font-medium shadow-[inset_0_0_0_1px_var(--border)]' : 'bg-transparent text-hint font-normal'
+                }`}
+              >
                 <Icon name={icon} size={16} />{label}
               </button>
             );
@@ -50,18 +56,18 @@ export function CommitScreen({
         {/* promise field */}
         <div>
           <textarea
-            style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', color: 'var(--text)', fontFamily: 'var(--font-sans)', fontSize: 17, padding: '13px 14px', resize: 'none', outline: 'none', lineHeight: 1.4 }}
+            className="w-full resize-none rounded border border-border bg-bg px-[14px] py-[13px] text-[17px] leading-[1.4] text-text outline-none"
             rows={3}
             placeholder={type === 'learn' ? 'e.g. read the OAuth refresh spec and push notes' : 'e.g. add rotation + replay detection to the token service'}
             value={value} onChange={e => onChange?.(e.target.value)} autoFocus
           />
           {repo && type === 'build' && (
-            <div className="mono" style={{ marginTop: 10, fontSize: 12, color: 'var(--hint)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div className="mono mt-2.5 flex items-center gap-1.5 text-xs text-hint">
               <Icon name="branch" size={13} sw={1.8} />pushes to {repo}
             </div>
           )}
           {beginner && (
-            <div style={{ marginTop: 12, display: 'flex', gap: 9, alignItems: 'flex-start', fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5 }}>
+            <div className="mt-3 flex items-start gap-[9px] text-[12.5px] leading-normal text-muted">
               <Tag tone="blue" style={{ flexShrink: 0 }}><Icon name="spark" size={12} />beginner</Tag>
               <span>Early on, learning and pushing notes counts. The bar rises as you build a track record.</span>
             </div>
@@ -70,22 +76,22 @@ export function CommitScreen({
 
         {/* coach suggestion */}
         {suggestion && (
-        <div style={{ borderLeft: '2px solid var(--amber)', paddingLeft: 14 }}>
-          <div className="mono" style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--amber)', display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
-            <Icon name="spark" size={13} />from today&rsquo;s lesson
+          <div className="border-l-2 border-amber pl-[14px]">
+            <div className="mono mb-2 flex items-center gap-[7px] text-[10.5px] uppercase tracking-[0.07em] text-amber">
+              <Icon name="spark" size={13} />from today&rsquo;s lesson
+            </div>
+            <div className="text-sm leading-normal text-muted">{suggestion}</div>
+            <button
+              onClick={() => { onType?.('build'); onChange?.(suggestion); }}
+              className="mono mt-2.5 inline-flex items-center gap-1.5 border-0 bg-transparent p-0 text-[13px] text-blue">
+              <Icon name="plus" size={14} />Use this
+            </button>
           </div>
-          <div style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.5 }}>{suggestion}</div>
-          <button
-            onClick={() => { onType?.('build'); onChange?.(suggestion); }}
-            style={{ background: 'none', border: 0, padding: 0, marginTop: 10, fontSize: 13, color: 'var(--blue)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <Icon name="plus" size={14} />Use this
-          </button>
-        </div>
         )}
       </div>
 
       {/* footer CTA */}
-      <div style={{ flexShrink: 0, padding: '14px 20px 28px', borderTop: '1px solid var(--border-soft)', background: 'var(--bg)' }}>
+      <div className="shrink-0 border-t border-border-soft bg-bg px-5 pb-7 pt-[14px]">
         <Button kind={empty ? 'ghost' : 'green'} icon="commit" onClick={onSeal} disabled={empty} loading={loading}>
           {loading ? 'Sealing…' : 'Seal tomorrow’s commitment'}
         </Button>

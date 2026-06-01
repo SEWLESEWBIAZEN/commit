@@ -9,7 +9,8 @@ export interface Context {
   userId: string;
   profile: Profile;
   token: string | null;
-  repo: string | null;
+  repos: string[];        // all tracked repos ("owner/name")
+  repo: string | null;    // primary (repos[0]) — kept for single-repo call sites
   login: string | null;
 }
 
@@ -30,17 +31,26 @@ export async function getContext(): Promise<Context | null> {
 
   if (!profile) return null;
 
+  // Select * (not named columns) so this still works before migration 0003 adds
+  // selected_repos — a missing named column would fail the whole query and make
+  // the user look disconnected.
   const { data: conn } = await admin
     .from('github_connections')
-    .select('provider_token, selected_repo')
+    .select('*')
     .eq('user_id', user.id)
-    .maybeSingle<{ provider_token: string | null; selected_repo: string | null }>();
+    .maybeSingle<{ provider_token: string | null; selected_repo: string | null; selected_repos?: string[] | null }>();
+
+  // Prefer the array; fall back to the legacy single column.
+  const repos = (conn?.selected_repos && conn.selected_repos.length > 0)
+    ? conn.selected_repos
+    : conn?.selected_repo ? [conn.selected_repo] : [];
 
   return {
     userId: user.id,
     profile,
     token: conn?.provider_token ?? null,
-    repo: conn?.selected_repo ?? null,
+    repos,
+    repo: repos[0] ?? null,
     login: profile.github_login,
   };
 }

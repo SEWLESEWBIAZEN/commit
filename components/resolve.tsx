@@ -6,11 +6,11 @@ import { Icon, Tag, Button, DiffStat, CoachQuote, VerdictBlock, SectionLabel } f
 // ── Answer echo ───────────────────────────────────────────────
 function AnswerEcho({ text }: { text: string }) {
   return (
-    <div style={{ display: 'flex', gap: 11 }}>
-      <div style={{ width: 22, height: 22, borderRadius: 5, background: 'var(--surface-2)', border: '1px solid var(--border)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' }}>
+    <div className="flex gap-[11px]">
+      <div className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[5px] border border-border bg-surface-2 text-muted">
         <Icon name="user" size={13} />
       </div>
-      <div style={{ flex: 1, fontSize: 14.5, lineHeight: 1.5, color: 'var(--muted)' }}>{text}</div>
+      <div className="flex-1 text-[14.5px] leading-normal text-muted">{text}</div>
     </div>
   );
 }
@@ -24,13 +24,13 @@ function LedgerRow({ tone, rail, head, body, action }: { tone: 'green' | 'amber'
   };
   const c = colors[tone];
   return (
-    <div style={{ display: 'flex', background: c.fill }}>
-      <div style={{ width: 3, background: c.line, flexShrink: 0 }} />
-      <div style={{ padding: 15, flex: 1 }}>
-        <div className="mono" style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.08em', color: c.line }}>{rail}</div>
-        <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--text)', marginTop: 7 }}>{head}</div>
-        <div style={{ fontSize: 13.5, lineHeight: 1.5, color: 'var(--muted)', marginTop: 5 }}>{body}</div>
-        {action && <div style={{ marginTop: 10 }}>{action}</div>}
+    <div className="flex" style={{ background: c.fill }}>
+      <div className="w-[3px] shrink-0" style={{ background: c.line }} />
+      <div className="flex-1 p-[15px]">
+        <div className="mono text-[10.5px] uppercase tracking-[0.08em]" style={{ color: c.line }}>{rail}</div>
+        <div className="mt-[7px] text-[15px] font-medium text-text">{head}</div>
+        <div className="mt-[5px] text-[13.5px] leading-normal text-muted">{body}</div>
+        {action && <div className="mt-2.5">{action}</div>}
       </div>
     </div>
   );
@@ -47,20 +47,20 @@ function Verdicts({ verdict, streak, layout, onContinue, content }: { verdict: R
 
   if (layout === 'ledger') {
     return (
-      <div className="cm-rise" style={{ border: '1px solid var(--border)', borderRadius: 'var(--r)', overflow: 'hidden' }}>
+      <div className="cm-rise overflow-hidden rounded border border-border">
         <LedgerRow
           tone={isNone ? 'muted' : 'green'}
           rail="streak"
           head={isNone ? 'not counted' : `counted · streak ${streak}`}
-          body={isNone ? 'That answer was evasive. Show you understood it.' : isGood ? 'You showed up and answered honestly.' : 'Being wrong doesn\u2019t break it \u2014 hiding does.'}
+          body={isNone ? 'That answer was evasive. Show you understood it.' : isGood ? 'You showed up and answered honestly.' : 'Being wrong doesn’t break it — hiding does.'}
         />
-        <div style={{ height: 1, background: 'var(--border)' }} />
+        <div className="h-px bg-border" />
         <LedgerRow
           tone="amber"
           rail="lesson"
-          head={isGood ? 'Solid \u2014 here\u2019s the next level.' : 'httpOnly is not the whole story.'}
-          body={isGood ? 'Next: think about replay. A stolen token used twice should invalidate the family.' : 'You\u2019re missing rotation: issue a new refresh token on every use, invalidate the old one.'}
-          action={<button onClick={onContinue} className="mono" style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', fontSize: 12.5, color: 'var(--blue)' }}>+ make it tomorrow&rsquo;s commitment</button>}
+          head={isGood ? 'Solid — here’s the next level.' : 'httpOnly is not the whole story.'}
+          body={isGood ? 'Next: think about replay. A stolen token used twice should invalidate the family.' : 'You’re missing rotation: issue a new refresh token on every use, invalidate the old one.'}
+          action={<button onClick={onContinue} className="mono border-0 bg-transparent p-0 text-[12.5px] text-blue">+ make it tomorrow&rsquo;s commitment</button>}
         />
       </div>
     );
@@ -75,7 +75,7 @@ function Verdicts({ verdict, streak, layout, onContinue, content }: { verdict: R
   const lBody = content?.lessonBody ?? 'Take the next concrete step on this tomorrow.';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <div className="flex flex-col gap-[14px]">
       <div className="cm-rise">
         <VerdictBlock
           variant={isNone ? 'null_' : 'streak'}
@@ -87,7 +87,7 @@ function Verdicts({ verdict, streak, layout, onContinue, content }: { verdict: R
       </div>
       {!isNone && (
         <>
-          <div className="mono" style={{ textAlign: 'center', fontSize: 10.5, color: 'var(--hint)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>&#8212; separate verdict &#8212;</div>
+          <div className="mono text-center text-[10.5px] uppercase tracking-[0.1em] text-hint">&#8212; separate verdict &#8212;</div>
           <div className="cm-rise" style={{ animationDelay: '.12s' }}>
             <VerdictBlock
               variant="lesson"
@@ -95,7 +95,7 @@ function Verdicts({ verdict, streak, layout, onContinue, content }: { verdict: R
               title={lTitle}
               footer={
                 <Button kind="ghost" icon="plus" onClick={onContinue} style={{ fontSize: 14, padding: '11px 14px' }}>
-                  {isGood ? 'Make it tomorrow\u2019s commitment' : 'Make the fix tomorrow\u2019s commitment'}
+                  {isGood ? 'Make it tomorrow’s commitment' : 'Make the fix tomorrow’s commitment'}
                 </Button>
               }
             >
@@ -113,21 +113,26 @@ interface FivePointProps { label: string; value: number; onChange: (n: number) =
 function FivePoint({ label, value, onChange, lowLabel, highLabel, color = 'var(--blue)' }: FivePointProps) {
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 9 }}>
-        <span style={{ fontSize: 14, color: 'var(--text)' }}>{label}</span>
-        <span className="mono" style={{ fontSize: 12, color: value ? color : 'var(--hint)' }}>{value ? `${value}/5` : '—'}</span>
+      <div className="mb-[9px] flex items-baseline justify-between">
+        <span className="text-sm text-text">{label}</span>
+        <span className="mono text-xs" style={{ color: value ? color : 'var(--hint)' }}>{value ? `${value}/5` : '—'}</span>
       </div>
-      <div style={{ display: 'flex', gap: 7 }}>
+      <div className="flex gap-[7px]">
         {[1,2,3,4,5].map(n => {
           const on = value >= n;
           return (
-            <button key={n} onClick={() => onChange(n)} style={{ flex: 1, height: 38, borderRadius: 6, cursor: 'pointer', border: `1px solid ${on ? color : 'var(--border)'}`, background: on ? color : 'var(--bg)', color: on ? 'var(--bg)' : 'var(--hint)', fontFamily: 'var(--font-mono)', fontSize: 13, transition: 'all .12s' }}>{n}</button>
+            <button
+              key={n}
+              onClick={() => onChange(n)}
+              className="mono h-[38px] flex-1 rounded-md text-[13px] transition-all"
+              style={{ border: `1px solid ${on ? color : 'var(--border)'}`, background: on ? color : 'var(--bg)', color: on ? 'var(--bg)' : 'var(--hint)' }}
+            >{n}</button>
           );
         })}
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-        <span style={{ fontSize: 11, color: 'var(--hint)' }}>{lowLabel}</span>
-        <span style={{ fontSize: 11, color: 'var(--hint)' }}>{highLabel}</span>
+      <div className="mt-1.5 flex justify-between">
+        <span className="text-[11px] text-hint">{lowLabel}</span>
+        <span className="text-[11px] text-hint">{highLabel}</span>
       </div>
     </div>
   );
@@ -136,24 +141,24 @@ function FivePoint({ label, value, onChange, lowLabel, highLabel, color = 'var(-
 // ── Emotion check-in ──────────────────────────────────────────
 interface EmotionProps { mood: number; energy: number; onMood: (n: number) => void; onEnergy: (n: number) => void; note: string; onNote: (s: string) => void; onDone: () => void; busy?: boolean; }
 function EmotionCheckin({ mood, energy, onMood, onEnergy, note, onNote, onDone, busy = false }: EmotionProps) {
-  const coachLine = mood <= 2 ? 'That\u2019s exactly the day that builds you. You shipped anyway.'
+  const coachLine = mood <= 2 ? 'That’s exactly the day that builds you. You shipped anyway.'
     : mood >= 4 ? 'Good day. The coach is watching for what made it one.'
-    : 'Logged. Energy and mood shape the advice you\u2019ll get.';
+    : 'Logged. Energy and mood shape the advice you’ll get.';
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+    <div className="flex flex-col gap-[22px]">
       <div>
         <SectionLabel>before you go</SectionLabel>
-        <div style={{ fontSize: 18, marginTop: 9, color: 'var(--text)' }}>How did today feel?</div>
-        <div style={{ fontSize: 13.5, color: 'var(--hint)', marginTop: 5 }}>Optional. Takes five seconds.</div>
+        <div className="mt-[9px] text-lg text-text">How did today feel?</div>
+        <div className="mt-[5px] text-[13.5px] text-hint">Optional. Takes five seconds.</div>
       </div>
       <FivePoint label="Mood" value={mood} onChange={onMood} lowLabel="rough" highLabel="great" color="var(--blue)" />
       <FivePoint label="Energy" value={energy} onChange={onEnergy} lowLabel="drained" highLabel="wired" color="var(--green)" />
       <textarea
-        style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', color: 'var(--text)', fontFamily: 'var(--font-sans)', fontSize: 15, padding: '13px 14px', resize: 'none', outline: 'none' }}
+        className="w-full resize-none rounded border border-border bg-bg px-[14px] py-[13px] text-[15px] text-text outline-none"
         rows={2} placeholder="A note to your future self (optional)" value={note} onChange={e => onNote(e.target.value)}
       />
       {(mood > 0 || energy > 0) && (
-        <div style={{ borderLeft: '2px solid var(--blue)', paddingLeft: 13, fontSize: 13.5, color: 'var(--muted)', lineHeight: 1.5 }}>{coachLine}</div>
+        <div className="border-l-2 border-blue pl-[13px] text-[13.5px] leading-normal text-muted">{coachLine}</div>
       )}
       <Button kind="solid" iconRight="arrow" onClick={onDone} loading={busy}>{busy ? 'Saving…' : 'Set tomorrow’s commitment'}</Button>
     </div>
@@ -177,50 +182,50 @@ export function ResolveScreen({
   phase = 'question', verdict = 'wrong', layout = 'stacked', streak = 24,
   repo = 'auth-service', add = 142, del = 37, files = 4,
   verdictTitle, verdictBody, lessonTitle, lessonBody, suggestion,
-  question = 'You set httpOnly on the refresh cookie. Walk me through what that actually protects against \u2014 and what it doesn\u2019t.',
-  answerText = '', submittedAnswer = 'httpOnly means JavaScript can\u2019t read the cookie, so an XSS script can\u2019t grab the token. I set it along with Secure and SameSite=strict.',
+  question = 'You set httpOnly on the refresh cookie. Walk me through what that actually protects against — and what it doesn’t.',
+  answerText = '', submittedAnswer = 'httpOnly means JavaScript can’t read the cookie, so an XSS script can’t grab the token. I set it along with Secure and SameSite=strict.',
   mood = 0, energy = 0, note = '', emotionBusy = false,
   onAnswer, onSubmit, onClose, onContinue,
   onMood = () => {}, onEnergy = () => {}, onNote = () => {}, onEmotionDone = () => {},
 }: ResolveScreenProps) {
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
+    <div className="flex h-full flex-col bg-bg">
       {/* header */}
-      <div style={{ flexShrink: 0, padding: '12px 20px 14px', borderBottom: '1px solid var(--border-soft)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={onClose} style={{ background: 'none', border: 0, color: 'var(--muted)', cursor: 'pointer', padding: 0, display: 'flex' }}><Icon name="close" size={22} /></button>
-          <div style={{ flex: 1, fontSize: 16, fontWeight: 500 }}>Resolve today</div>
+      <div className="shrink-0 border-b border-border-soft px-5 pb-[14px] pt-3">
+        <div className="flex items-center gap-3">
+          <button onClick={onClose} className="flex border-0 bg-transparent p-0 text-muted"><Icon name="close" size={22} /></button>
+          <div className="flex-1 text-base font-medium">Resolve today</div>
           <Tag tone="green"><Icon name="check" size={12} sw={2.4} />pushed</Tag>
         </div>
-        <div style={{ marginTop: 12 }}><DiffStat repo={repo} add={add} del={del} files={files} /></div>
+        <div className="mt-3"><DiffStat repo={repo} add={add} del={del} files={files} /></div>
       </div>
 
       {/* body */}
-      <div className="cm-scroll" style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+      <div className="cm-scroll flex-1 overflow-y-auto p-5">
         {phase === 'emotion' ? (
           <EmotionCheckin mood={mood} energy={energy} onMood={onMood} onEnergy={onEnergy} note={note} onNote={onNote} onDone={onEmotionDone} busy={emotionBusy} />
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+          <div className="flex flex-col gap-[22px]">
             <CoachQuote>{question}</CoachQuote>
 
             {phase === 'question' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="flex flex-col gap-3">
                 <textarea
-                  style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r)', color: 'var(--text)', fontFamily: 'var(--font-sans)', fontSize: 16, padding: '13px 14px', resize: 'none', outline: 'none', lineHeight: 1.5 }}
+                  className="w-full resize-none rounded border border-border bg-bg px-[14px] py-[13px] text-base leading-normal text-text outline-none"
                   rows={5} placeholder="Explain it in your own words. The coach can tell." value={answerText} onChange={e => onAnswer?.(e.target.value)} autoFocus
                 />
                 <Button kind="green" iconRight="arrow" onClick={onSubmit}>Submit answer</Button>
-                <div className="mono" style={{ textAlign: 'center', fontSize: 11.5, color: 'var(--hint)' }}>honesty keeps the streak — not being right</div>
+                <div className="mono text-center text-[11.5px] text-hint">honesty keeps the streak — not being right</div>
               </div>
             )}
 
             {phase === 'loading' && (
               <>
                 <AnswerEcho text={submittedAnswer} />
-                <div style={{ height: 1, background: 'var(--border-soft)' }} />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 11, color: 'var(--muted)', fontSize: 14 }}>
-                  <span style={{ display: 'inline-flex', gap: 4, color: 'var(--blue)' }}><span className="cm-dot"/><span className="cm-dot"/><span className="cm-dot"/></span>
-                  <span className="mono" style={{ fontSize: 12.5 }}>reading your answer against the diff</span>
+                <div className="h-px bg-border-soft" />
+                <div className="flex items-center gap-[11px] text-sm text-muted">
+                  <span className="inline-flex gap-1 text-blue"><span className="cm-dot"/><span className="cm-dot"/><span className="cm-dot"/></span>
+                  <span className="mono text-[12.5px]">reading your answer against the diff</span>
                 </div>
               </>
             )}
@@ -228,7 +233,7 @@ export function ResolveScreen({
             {phase === 'verdict' && (
               <>
                 <AnswerEcho text={submittedAnswer} />
-                <div style={{ height: 1, background: 'var(--border-soft)' }} />
+                <div className="h-px bg-border-soft" />
                 <Verdicts verdict={verdict} streak={streak} layout={layout} onContinue={onContinue ?? (() => {})} content={{ verdictTitle, verdictBody, lessonTitle, lessonBody, suggestion }} />
                 {verdict === 'none'
                   ? <Button kind="ghost" onClick={onClose} style={{ marginTop: 8 }}>Answer again</Button>

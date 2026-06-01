@@ -9,10 +9,13 @@ function Row({ icon, label, value, onClick, danger = false, last = false, contro
   danger?: boolean; last?: boolean; control?: React.ReactNode;
 }) {
   return (
-    <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '14px 16px', cursor: onClick ? 'pointer' : 'default', borderBottom: last ? 'none' : '1px solid var(--border-soft)' }}>
-      {icon && <span style={{ color: danger ? 'var(--red)' : 'var(--muted)', flexShrink: 0 }}><Icon name={icon} size={18} /></span>}
-      <span style={{ flex: 1, fontSize: 15, color: danger ? 'var(--red)' : 'var(--text)' }}>{label}</span>
-      {value && <span className="mono" style={{ fontSize: 13, color: 'var(--muted)' }}>{value}</span>}
+    <div
+      onClick={onClick}
+      className={`flex items-center gap-[13px] px-4 py-[14px] ${onClick ? 'cursor-pointer' : 'cursor-default'} ${last ? '' : 'border-b border-border-soft'}`}
+    >
+      {icon && <span className={`shrink-0 ${danger ? 'text-red' : 'text-muted'}`}><Icon name={icon} size={18} /></span>}
+      <span className={`flex-1 text-[15px] ${danger ? 'text-red' : 'text-text'}`}>{label}</span>
+      {value && <span className="mono text-[13px] text-muted">{value}</span>}
       {control}
       {onClick && !control && <Icon name="chevron" size={16} style={{ color: 'var(--hint)' }} />}
     </div>
@@ -22,8 +25,8 @@ function Row({ icon, label, value, onClick, danger = false, last = false, contro
 function Group({ header, children }: { header: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="mono" style={{ fontSize: 11, color: 'var(--hint)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '0 4px', marginBottom: 10 }}>{header}</div>
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', overflow: 'hidden' }}>{children}</div>
+      <div className="mono mb-2.5 px-1 text-[11px] uppercase tracking-[0.08em] text-hint">{header}</div>
+      <div className="overflow-hidden rounded border border-border bg-surface">{children}</div>
     </div>
   );
 }
@@ -40,6 +43,7 @@ interface SettingsScreenProps {
   avatar?: string | null;
   timezone?: string | null;
   repo?: string | null;
+  repos?: string[];
   disconnecting?: boolean;
   onDisconnect?: () => void;
   settings?: NotificationSettings | null;
@@ -55,7 +59,7 @@ interface SettingsScreenProps {
 }
 
 export function SettingsScreen({
-  login, avatar, timezone, repo, disconnecting = false, onDisconnect,
+  login, avatar, timezone, repo, repos, disconnecting = false, onDisconnect,
   settings, onSaveSettings, onTogglePush, pushBusy = false, pushSupported = true, notice,
   onTest, testBusy = false, theme = 'dark', onSetTheme,
 }: SettingsScreenProps = {}) {
@@ -77,6 +81,7 @@ export function SettingsScreen({
 
   const loading = !settings;
   const push = settings?.pushEnabled ?? false;
+  const repoList = repos && repos.length ? repos : repo ? [repo] : [];
 
   const toggleReminders = () => { const n = !reminders; setReminders(n); onSaveSettings?.({ remindersEnabled: n }); };
   const toggleEmail = () => { const n = !email; setEmail(n); onSaveSettings?.({ emailEnabled: n }); };
@@ -89,28 +94,28 @@ export function SettingsScreen({
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
-      <div style={{ padding: '10px 20px', fontSize: 17, fontWeight: 500, flexShrink: 0 }}>Settings</div>
+    <div className="flex h-full flex-col bg-bg">
+      <div className="shrink-0 px-5 py-2.5 text-[17px] font-medium">Settings</div>
 
-      <div className="cm-scroll" style={{ flex: 1, padding: '4px 20px 28px', display: 'flex', flexDirection: 'column', gap: 22 }}>
+      <div className="cm-scroll flex flex-1 flex-col gap-[22px] overflow-y-auto px-5 pb-7 pt-1">
 
         {/* account */}
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: 16, display: 'flex', alignItems: 'center', gap: 13 }}>
-          <div style={{ width: 42, height: 42, borderRadius: 9, background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', overflow: 'hidden' }}>
+        <div className="flex items-center gap-[13px] rounded border border-border bg-surface p-4">
+          <div className="flex h-[42px] w-[42px] items-center justify-center overflow-hidden rounded-[9px] border border-border bg-surface-2 text-muted">
             {avatar
-              ? <img src={avatar} alt="" width={42} height={42} style={{ objectFit: 'cover' }} />
+              ? <img src={avatar} alt="" width={42} height={42} className="object-cover" />
               : <Icon name="user" size={22} />}
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15.5, color: 'var(--text)', fontWeight: 600 }}>@{login ?? 'you'}</div>
-            <div className="mono" style={{ fontSize: 12, color: 'var(--green)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 5 }}>
+          <div className="flex-1">
+            <div className="text-[15.5px] font-semibold text-text">@{login ?? 'you'}</div>
+            <div className="mono mt-[3px] flex items-center gap-[5px] text-xs text-green">
               <Icon name="branch" size={12} sw={1.8} />GitHub connected
             </div>
           </div>
         </div>
 
         {notice && (
-          <div style={{ background: 'var(--amber-fill)', border: '1px solid var(--amber-edge)', borderRadius: 'var(--r)', padding: '11px 14px', fontSize: 13, color: 'var(--amber)', lineHeight: 1.5 }}>
+          <div className="rounded border border-amber-edge bg-amber-fill px-[14px] py-[11px] text-[13px] leading-normal text-amber">
             {notice}
           </div>
         )}
@@ -123,8 +128,8 @@ export function SettingsScreen({
               value={time}
               disabled={loading || !reminders}
               onChange={(e) => changeTime(e.target.value)}
-              className="mono"
-              style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 7, color: 'var(--text)', fontSize: 13, padding: '5px 8px', outline: 'none', opacity: reminders ? 1 : 0.5, colorScheme: 'dark' }}
+              className="mono rounded-[7px] border border-border bg-surface-2 px-2 py-[5px] text-[13px] text-text outline-none"
+              style={{ opacity: reminders ? 1 : 0.5 }}
             />
           } />
           <Row icon="globe" label="Timezone" value={timezone ?? '—'} last />
@@ -143,46 +148,61 @@ export function SettingsScreen({
         </Group>
 
         <Group header="accountability">
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-soft)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginBottom: 10 }}>
-              <span style={{ color: 'var(--muted)', flexShrink: 0 }}><Icon name="user" size={18} /></span>
-              <span style={{ flex: 1, fontSize: 15, color: 'var(--text)' }}>Accountability partner</span>
+          <div className="border-b border-border-soft px-4 py-[14px]">
+            <div className="mb-2.5 flex items-center gap-[13px]">
+              <span className="shrink-0 text-muted"><Icon name="user" size={18} /></span>
+              <span className="flex-1 text-[15px] text-text">Accountability partner</span>
             </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <div style={{ flex: 1, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 9, padding: '0 11px' }}>
-                <Icon name="mail" size={16} style={{ color: 'var(--hint)' }} />
-                <input
-                  type="email"
-                  value={partnerDraft}
-                  disabled={loading}
-                  onChange={(e) => setPartnerDraft(e.target.value)}
-                  onBlur={savePartner}
-                  onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                  placeholder="partner@example.com"
-                  style={{ flex: 1, background: 'transparent', border: 0, color: 'var(--text)', fontSize: 14, padding: '10px 0', outline: 'none' }}
-                />
-              </div>
+            <div className="flex flex-1 items-center gap-[9px] rounded border border-border bg-surface-2 px-[11px]">
+              <Icon name="mail" size={16} style={{ color: 'var(--hint)' }} />
+              <input
+                type="email"
+                value={partnerDraft}
+                disabled={loading}
+                onChange={(e) => setPartnerDraft(e.target.value)}
+                onBlur={savePartner}
+                onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                placeholder="partner@example.com"
+                className="flex-1 border-0 bg-transparent py-2.5 text-sm text-text outline-none"
+              />
             </div>
-            <div style={{ fontSize: 12, color: 'var(--hint)', marginTop: 8, lineHeight: 1.45 }}>
+            <div className="mt-2 text-xs leading-[1.45] text-hint">
               {partnerSaved ? 'They get an email on a missed day.' : 'Optional. On a missed day, Commit emails one person.'}
             </div>
           </div>
-          <Row icon="globe" label="Repo that counts" value={repo ?? '—'} last />
+          {repoList.length <= 1 ? (
+            <Row icon="globe" label="Repo that counts" value={repoList[0] ?? '—'} last />
+          ) : (
+            <div className="px-4 py-3">
+              <div className="mb-2.5 flex items-center gap-[13px]">
+                <span className="shrink-0 text-muted"><Icon name="globe" size={18} /></span>
+                <span className="flex-1 text-[15px] text-text">Repos that count</span>
+                <span className="mono text-[13px] text-muted">{repoList.length}</span>
+              </div>
+              <div className="flex flex-col gap-[7px]">
+                {repoList.map((r) => (
+                  <div key={r} className="mono flex items-center gap-[7px] text-[12.5px] text-muted">
+                    <Icon name="branch" size={13} sw={1.8} style={{ color: 'var(--hint)' }} />{r}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </Group>
 
         {onSetTheme && (
           <Group header="appearance">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '12px 16px' }}>
-              <span style={{ color: 'var(--muted)', flexShrink: 0 }}><Icon name="spark" size={18} /></span>
-              <span style={{ flex: 1, fontSize: 15, color: 'var(--text)' }}>Theme</span>
-              <div style={{ display: 'flex', gap: 4, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 8, padding: 3 }}>
+            <div className="flex items-center gap-[13px] px-4 py-3">
+              <span className="shrink-0 text-muted"><Icon name="spark" size={18} /></span>
+              <span className="flex-1 text-[15px] text-text">Theme</span>
+              <div className="flex gap-1 rounded border border-border bg-surface-2 p-[3px]">
                 {(['light', 'dark'] as const).map((t) => {
                   const on = theme === t;
                   return (
                     <button
                       key={t}
                       onClick={() => onSetTheme(t)}
-                      style={{ padding: '6px 14px', borderRadius: 6, border: 0, cursor: 'pointer', background: on ? 'var(--bg)' : 'transparent', color: on ? 'var(--text)' : 'var(--hint)', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: on ? 500 : 400, textTransform: 'capitalize', boxShadow: on ? 'inset 0 0 0 1px var(--border)' : 'none' }}
+                      className={`rounded-md border-0 px-[14px] py-1.5 text-[13px] capitalize ${on ? 'bg-bg text-text font-medium shadow-[inset_0_0_0_1px_var(--border)]' : 'bg-transparent text-hint font-normal'}`}
                     >
                       {t}
                     </button>
@@ -197,7 +217,7 @@ export function SettingsScreen({
           <Row icon="close" label={disconnecting ? 'Disconnecting…' : 'Disconnect GitHub'} danger onClick={disconnecting ? undefined : onDisconnect} last />
         </Group>
 
-        <div className="mono" style={{ textAlign: 'center', fontSize: 11.5, color: 'var(--hint)', paddingTop: 4 }}>commit · v1.0.0 · build the habit</div>
+        <div className="mono pt-1 text-center text-[11.5px] text-hint">commit · v1.0.0 · build the habit</div>
       </div>
     </div>
   );

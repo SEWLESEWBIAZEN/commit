@@ -1,6 +1,3 @@
-/* Commit service worker — Web Push + click handling.
-   Kept dependency-free and minimal: no offline caching, just notifications. */
-
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 

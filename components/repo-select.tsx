@@ -10,15 +10,15 @@ interface RepoSummary {
 }
 
 interface RepoSelectProps {
-  onSelected: (repo: string) => void;
+  onSelected: (repos: string[]) => void;
 }
 
 // Onboarding step (replaces the prototype's schedule/install/partner): pick the
-// repo whose pushes count toward the streak.
+// repos whose pushes count toward the streak. Multiple allowed.
 export function RepoSelect({ onSelected }: RepoSelectProps) {
   const [repos, setRepos] = useState<RepoSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [chosen, setChosen] = useState<string | null>(null);
+  const [chosen, setChosen] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -31,13 +31,16 @@ export function RepoSelect({ onSelected }: RepoSelectProps) {
       .catch(() => setError('Could not load repos'));
   }, []);
 
+  const toggle = (full: string) =>
+    setChosen((c) => (c.includes(full) ? c.filter((x) => x !== full) : [...c, full]));
+
   const save = async () => {
-    if (!chosen) return;
+    if (chosen.length === 0) return;
     setSaving(true);
     const res = await fetch('/api/github/select-repo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ repo: chosen }),
+      body: JSON.stringify({ repos: chosen }),
     });
     if (res.ok) onSelected(chosen);
     else setSaving(false);
@@ -50,10 +53,10 @@ export function RepoSelect({ onSelected }: RepoSelectProps) {
       </div>
       <div className="shrink-0 px-6 pb-2 pt-6">
         <div className="text-2xl leading-tight tracking-[-0.02em] text-text">
-          Which repo counts?
+          Which repos count?
         </div>
         <div className="mt-2.5 text-[14.5px] leading-normal text-muted">
-          Commit watches your pushes here to verify the work. You can change it later.
+          Pick one or more. A push to any of them counts toward your streak. You can change this later.
         </div>
         <SectionLabel style={{ marginTop: 22 }}>your repos</SectionLabel>
       </div>
@@ -65,11 +68,11 @@ export function RepoSelect({ onSelected }: RepoSelectProps) {
         )}
         <div className="flex flex-col gap-2">
           {repos?.map((r) => {
-            const on = chosen === r.full_name;
+            const on = chosen.includes(r.full_name);
             return (
               <button
                 key={r.full_name}
-                onClick={() => setChosen(r.full_name)}
+                onClick={() => toggle(r.full_name)}
                 className={`flex w-full items-center gap-[11px] rounded border px-[14px] py-[13px] text-left text-text transition-all ${
                   on ? 'border-green-edge bg-green-fill' : 'border-border bg-surface'
                 }`}
@@ -85,8 +88,8 @@ export function RepoSelect({ onSelected }: RepoSelectProps) {
       </div>
 
       <div className="shrink-0 border-t border-border-soft px-5 pb-7 pt-[14px]">
-        <Button kind={chosen ? 'green' : 'ghost'} iconRight="arrow" onClick={chosen && !saving ? save : undefined} disabled={!chosen || saving}>
-          {saving ? 'Saving…' : 'Use this repo'}
+        <Button kind={chosen.length ? 'green' : 'ghost'} iconRight="arrow" onClick={chosen.length && !saving ? save : undefined} disabled={chosen.length === 0 || saving}>
+          {saving ? 'Saving…' : chosen.length > 1 ? `Use these ${chosen.length} repos` : 'Use this repo'}
         </Button>
       </div>
     </div>

@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   const year = parseInt(searchParams.get('year') || '', 10) || now.getUTCFullYear();
   const month = parseInt(searchParams.get('month') || '', 10) || now.getUTCMonth() + 1; // 1-12
 
-  if (!ctx.repo || !ctx.token) {
+  if (ctx.repos.length === 0 || !ctx.token) {
     return NextResponse.json({ year, month, counts: {}, total: 0 });
   }
 
@@ -24,9 +24,13 @@ export async function GET(request: NextRequest) {
   const until = new Date(Date.UTC(year, month, 1, 14));
 
   try {
-    const dates = await listCommitsInRange(ctx.repo, since.toISOString(), until.toISOString(), {
-      token: ctx.token,
-    });
+    // Aggregate commit counts per day across every tracked repo.
+    const perRepo = await Promise.all(
+      ctx.repos.map((r) =>
+        listCommitsInRange(r, since.toISOString(), until.toISOString(), { token: ctx.token! }).catch(() => [] as string[]),
+      ),
+    );
+    const dates = perRepo.flat();
     const counts: Record<string, number> = {};
     for (const d of dates) {
       const key = tzDateOf(d, ctx.profile.timezone);
