@@ -7,14 +7,14 @@ interface CommitScreenProps {
   value?: string; onChange?: (s: string) => void;
   type?: CommitType; onType?: (t: CommitType) => void;
   repo?: string; onSeal?: () => void; onBack?: () => void;
-  suggestion?: string; beginner?: boolean;
+  suggestion?: string; beginner?: boolean; loading?: boolean;
 }
 
 export function CommitScreen({
   value = '', onChange, type = 'build', onType,
   repo = 'auth-service', onSeal, onBack,
   suggestion = 'Add refresh-token rotation: issue a new token on every use, invalidate the old one.',
-  beginner = false,
+  beginner = false, loading = false,
 }: CommitScreenProps) {
   const empty = !value.trim();
 
@@ -86,8 +86,8 @@ export function CommitScreen({
 
       {/* footer CTA */}
       <div style={{ flexShrink: 0, padding: '14px 20px 28px', borderTop: '1px solid var(--border-soft)', background: 'rgba(13,17,23,0.9)' }}>
-        <Button kind={empty ? 'ghost' : 'green'} icon="commit" onClick={empty ? undefined : onSeal} disabled={empty}>
-          Seal tomorrow&rsquo;s commitment
+        <Button kind={empty ? 'ghost' : 'green'} icon="commit" onClick={onSeal} disabled={empty} loading={loading}>
+          {loading ? 'Sealing…' : 'Seal tomorrow’s commitment'}
         </Button>
       </div>
     </div>

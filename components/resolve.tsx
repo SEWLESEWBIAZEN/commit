@@ -134,8 +134,8 @@ function FivePoint({ label, value, onChange, lowLabel, highLabel, color = 'var(-
 }
 
 // ── Emotion check-in ──────────────────────────────────────────
-interface EmotionProps { mood: number; energy: number; onMood: (n: number) => void; onEnergy: (n: number) => void; note: string; onNote: (s: string) => void; onDone: () => void; }
-function EmotionCheckin({ mood, energy, onMood, onEnergy, note, onNote, onDone }: EmotionProps) {
+interface EmotionProps { mood: number; energy: number; onMood: (n: number) => void; onEnergy: (n: number) => void; note: string; onNote: (s: string) => void; onDone: () => void; busy?: boolean; }
+function EmotionCheckin({ mood, energy, onMood, onEnergy, note, onNote, onDone, busy = false }: EmotionProps) {
   const coachLine = mood <= 2 ? 'That\u2019s exactly the day that builds you. You shipped anyway.'
     : mood >= 4 ? 'Good day. The coach is watching for what made it one.'
     : 'Logged. Energy and mood shape the advice you\u2019ll get.';
@@ -155,7 +155,7 @@ function EmotionCheckin({ mood, energy, onMood, onEnergy, note, onNote, onDone }
       {(mood > 0 || energy > 0) && (
         <div style={{ borderLeft: '2px solid var(--blue)', paddingLeft: 13, fontSize: 13.5, color: 'var(--muted)', lineHeight: 1.5 }}>{coachLine}</div>
       )}
-      <Button kind="solid" iconRight="arrow" onClick={onDone}>Set tomorrow&rsquo;s commitment</Button>
+      <Button kind="solid" iconRight="arrow" onClick={onDone} loading={busy}>{busy ? 'Saving…' : 'Set tomorrow’s commitment'}</Button>
     </div>
   );
 }
@@ -167,7 +167,7 @@ export interface ResolveScreenProps {
   add?: number; del?: number; files?: number;
   verdictTitle?: string; verdictBody?: string; lessonTitle?: string; lessonBody?: string; suggestion?: string;
   question?: string; answerText?: string; submittedAnswer?: string;
-  mood?: number; energy?: number; note?: string;
+  mood?: number; energy?: number; note?: string; emotionBusy?: boolean;
   onAnswer?: (s: string) => void; onSubmit?: () => void; onClose?: () => void;
   onContinue?: () => void; onMood?: (n: number) => void; onEnergy?: (n: number) => void;
   onNote?: (s: string) => void; onEmotionDone?: () => void;
@@ -179,7 +179,7 @@ export function ResolveScreen({
   verdictTitle, verdictBody, lessonTitle, lessonBody, suggestion,
   question = 'You set httpOnly on the refresh cookie. Walk me through what that actually protects against \u2014 and what it doesn\u2019t.',
   answerText = '', submittedAnswer = 'httpOnly means JavaScript can\u2019t read the cookie, so an XSS script can\u2019t grab the token. I set it along with Secure and SameSite=strict.',
-  mood = 0, energy = 0, note = '',
+  mood = 0, energy = 0, note = '', emotionBusy = false,
   onAnswer, onSubmit, onClose, onContinue,
   onMood = () => {}, onEnergy = () => {}, onNote = () => {}, onEmotionDone = () => {},
 }: ResolveScreenProps) {
@@ -198,7 +198,7 @@ export function ResolveScreen({
       {/* body */}
       <div className="cm-scroll" style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
         {phase === 'emotion' ? (
-          <EmotionCheckin mood={mood} energy={energy} onMood={onMood} onEnergy={onEnergy} note={note} onNote={onNote} onDone={onEmotionDone} />
+          <EmotionCheckin mood={mood} energy={energy} onMood={onMood} onEnergy={onEnergy} note={note} onNote={onNote} onDone={onEmotionDone} busy={emotionBusy} />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
             <CoachQuote>{question}</CoachQuote>

@@ -27,7 +27,16 @@ function Group({ header, children }: { header: string; children: React.ReactNode
   );
 }
 
-export function SettingsScreen() {
+interface SettingsScreenProps {
+  login?: string | null;
+  avatar?: string | null;
+  timezone?: string | null;
+  repo?: string | null;
+  disconnecting?: boolean;
+  onDisconnect?: () => void;
+}
+
+export function SettingsScreen({ login, avatar, timezone, repo, disconnecting = false, onDisconnect }: SettingsScreenProps = {}) {
   const [notif, setNotif] = useState(true);
   const [email, setEmail] = useState(true);
   const [pub,   setPub]   = useState(false);
@@ -40,11 +49,13 @@ export function SettingsScreen() {
 
         {/* account */}
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: 16, display: 'flex', alignItems: 'center', gap: 13 }}>
-          <div style={{ width: 42, height: 42, borderRadius: 9, background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)' }}>
-            <Icon name="user" size={22} />
+          <div style={{ width: 42, height: 42, borderRadius: 9, background: 'var(--surface-2)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', overflow: 'hidden' }}>
+            {avatar
+              ? <img src={avatar} alt="" width={42} height={42} style={{ objectFit: 'cover' }} />
+              : <Icon name="user" size={22} />}
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15.5 }}>@devsam</div>
+            <div style={{ fontSize: 15.5 }}>@{login ?? 'you'}</div>
             <div className="mono" style={{ fontSize: 12, color: 'var(--green)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 5 }}>
               <Icon name="branch" size={12} sw={1.8} />GitHub connected
             </div>
@@ -53,7 +64,7 @@ export function SettingsScreen() {
 
         <Group header="daily">
           <Row icon="clock" label="Reminder time" value="20:00" onClick={() => {}} />
-          <Row icon="globe" label="Timezone" value="Europe/Berlin" onClick={() => {}} last />
+          <Row icon="globe" label="Timezone" value={timezone ?? '—'} last />
         </Group>
 
         <Group header="notifications">
@@ -67,13 +78,12 @@ export function SettingsScreen() {
         </Group>
 
         <Group header="connection">
-          <Row icon="branch" label="Repos that count" value="3" onClick={() => {}} />
-          <Row icon="install" label="Re-install to home screen" onClick={() => {}} last />
+          <Row icon="branch" label="Repo that counts" value={repo ?? '—'} last />
         </Group>
 
         <Group header="account">
           <Row icon="lock" label="Privacy &amp; data" onClick={() => {}} />
-          <Row icon="close" label="Disconnect GitHub" danger onClick={() => {}} last />
+          <Row icon="close" label={disconnecting ? 'Disconnecting…' : 'Disconnect GitHub'} danger onClick={disconnecting ? undefined : onDisconnect} last />
         </Group>
 
         <div className="mono" style={{ textAlign: 'center', fontSize: 11.5, color: 'var(--hint)', paddingTop: 4 }}>commit · v1.0.0 · build the habit</div>

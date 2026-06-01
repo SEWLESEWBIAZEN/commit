@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import type { ResolvePhase, ResolveVerdict, CommitType, NavTab, OnbStep } from '@/components/types';
-import type { TodayResponse, VerdictPayload } from '@/lib/types';
+import type { TodayResponse, VerdictPayload, InsightsData, RepoCommit } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import { BottomNav } from '@/components/ui';
 import { TodayScreen } from '@/components/today';
@@ -19,6 +19,8 @@ interface Me {
   hasCommitments: boolean;
   streak: number;
   login: string | null;
+  avatar?: string | null;
+  timezone?: string | null;
 }
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
@@ -57,6 +59,13 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [me, setMe] = useState<Me | null>(null);
   const [today, setToday] = useState<TodayResponse | null>(null);
+  const [insights, setInsights] = useState<InsightsData | null>(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [commits, setCommits] = useState<RepoCommit[]>([]);
+  const [commitsLoading, setCommitsLoading] = useState(false);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [emotionBusy, setEmotionBusy] = useState(false);
   const [tab, setTab] = useState<NavTab>('today');
   const [err, setErr] = useState<string | null>(null);
 
@@ -124,16 +133,49 @@ export default function App() {
     if (me?.repo && me.hasCommitments) loadToday();
   }, [me, loadToday]);
 
+  // Load insights + recent commits whenever the tab is opened (always fresh).
+  useEffect(() => {
+    if (tab === 'insights') {
+      setInsightsLoading(true);
+      fetch('/api/insights')
+        .then((r) => (r.ok ? r.json() : null))
+        .then(setInsights)
+        .finally(() => setInsightsLoading(false));
+      setCommitsLoading(true);
+      fetch('/api/github/commits')
+        .then((r) => (r.ok ? r.json() : { commits: [] }))
+        .then((d) => setCommits(d.commits ?? []))
+        .finally(() => setCommitsLoading(false));
+    }
+  }, [tab]);
+
+  const disconnect = async () => {
+    setDisconnecting(true);
+    await fetch('/api/github/disconnect', { method: 'POST' }).catch(() => {});
+    await supabase?.auth.signOut();
+    setDisconnecting(false);
+    setSession(null);
+    setMe(null);
+    setToday(null);
+    setInsights(null);
+    setCommits([]);
+    setOverlay(null);
+    setTab('today');
+    setOnbStep('welcome');
+  };
+
   const signInGitHub = async () => {
     if (!supabase) return;
+    setAuthBusy(true);
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: {
         scopes: 'repo read:user user:email',
         redirectTo: `${window.location.origin}/auth/callback?tz=${encodeURIComponent(tz)}`,
       },
     });
+    if (error) setAuthBusy(false); // otherwise we're redirecting away
   };
 
   // ── resolve flow ────────────────────────────────────────────
@@ -182,13 +224,15 @@ export default function App() {
   const afterVerdict = () => setPhase('emotion');
 
   const emotionDone = async () => {
+    setEmotionBusy(true);
     if (resolutionId) {
       await fetch('/api/resolve/emotion', {
         method: 'POST',
         headers: JSON_HEADERS,
         body: JSON.stringify({ resolution_id: resolutionId, mood, energy, note }),
-      });
+      }).catch(() => {});
     }
+    setEmotionBusy(false);
     setMood(0); setEnergy(0); setNote('');
     // straight into setting tomorrow's commitment, prefilled from the lesson
     setCommitVal('');
@@ -272,6 +316,7 @@ export default function App() {
       <Shell>
         <OnboardingScreen
           step={onbStep}
+          busy={authBusy}
           onNext={() => (onbStep === 'welcome' ? setOnbStep('permission') : signInGitHub())}
           onBack={onbStep === 'welcome' ? undefined : () => setOnbStep('welcome')}
           onSkip={signInGitHub}
@@ -303,7 +348,8 @@ export default function App() {
           repo={me.repo}
           suggestion=""
           beginner
-          onSeal={sealing ? undefined : sealFirst}
+          loading={sealing}
+          onSeal={sealFirst}
         />
         <ErrorToast err={err} />
       </Shell>
@@ -333,6 +379,7 @@ export default function App() {
           mood={mood}
           energy={energy}
           note={note}
+          emotionBusy={emotionBusy}
           onAnswer={setAnswer}
           onSubmit={submitAnswer}
           onClose={onCloseResolve}
@@ -354,7 +401,8 @@ export default function App() {
           repo={today?.repo ?? me.repo ?? undefined}
           suggestion={vContent?.suggestion ?? ''}
           beginner={(today?.streak ?? 0) < 7}
-          onSeal={sealing ? undefined : sealCommit}
+          loading={sealing}
+          onSeal={sealCommit}
           onBack={() => setOverlay(null)}
         />
       );
@@ -364,9 +412,9 @@ export default function App() {
 
   let body: React.ReactNode;
   if (tab === 'insights') {
-    body = <InsightsScreen empty onNav={(t: string) => setTab(t as NavTab)} />;
+    body = <InsightsScreen data={insights} commits={commits} loading={insightsLoading} commitsLoading={commitsLoading} onNav={(t: string) => setTab(t as NavTab)} />;
   } else if (tab === 'settings') {
-    body = <SettingsScreen />;
+    body = <SettingsScreen login={me.login} avatar={me.avatar} timezone={me.timezone} repo={me.repo} disconnecting={disconnecting} onDisconnect={disconnect} />;
   } else if (!today) {
     return <Splash label="loading today" />;
   } else {
@@ -379,6 +427,7 @@ export default function App() {
         commitment={today.commitment?.body}
         ctype={today.commitment?.type}
         beginner={today.beginner}
+        date={formatToday()}
         pushCommits={today.push?.commits}
         pushMinutesAgo={today.push?.minutesAgo}
         pushAdd={today.push?.additions}
@@ -434,6 +483,14 @@ function ErrorToast({ err }: { err: string | null }) {
       {err}
     </div>
   );
+}
+
+// Header date in the prototype's style, e.g. "mon · jun 1" (user's local date).
+function formatToday(): string {
+  const d = new Date();
+  const wd = d.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+  const mo = d.toLocaleDateString('en-US', { month: 'short' }).toLowerCase();
+  return `${wd} · ${mo} ${d.getDate()}`;
 }
 
 function errorLabel(code?: string): string {

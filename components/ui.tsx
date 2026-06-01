@@ -79,31 +79,34 @@ type BtnKind = 'solid' | 'green' | 'ghost' | 'quiet';
 interface ButtonProps {
   kind?: BtnKind; children: React.ReactNode;
   onClick?: () => void; icon?: IconName; iconRight?: IconName;
-  style?: React.CSSProperties; disabled?: boolean;
+  style?: React.CSSProperties; disabled?: boolean; loading?: boolean;
 }
-export function Button({ kind = 'solid', children, onClick, icon, iconRight, style = {}, disabled }: ButtonProps) {
+export function Button({ kind = 'solid', children, onClick, icon, iconRight, style = {}, disabled, loading = false }: ButtonProps) {
   const kindStyles: Record<BtnKind, React.CSSProperties> = {
     solid: { background: 'var(--text)', color: 'var(--bg)', border: '1px solid transparent' },
     green: { background: 'var(--green-act)', color: '#fff', border: '1px solid transparent' },
     ghost: { background: 'transparent', color: 'var(--text)', border: '1px solid var(--border)' },
     quiet: { background: 'transparent', color: 'var(--muted)', border: '1px solid transparent' },
   };
+  const blocked = disabled || loading;
   return (
     <button
-      onClick={onClick} disabled={disabled}
+      onClick={blocked ? undefined : onClick} disabled={blocked}
       style={{
         width: '100%', fontFamily: 'var(--font-sans)', fontWeight: 500, fontSize: 16,
         borderRadius: 'var(--r)', padding: '14px 18px', display: 'flex',
         alignItems: 'center', justifyContent: 'center', gap: 9,
         letterSpacing: '-0.01em', transition: 'filter .15s',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.5 : 1,
+        cursor: blocked ? (loading ? 'progress' : 'not-allowed') : 'pointer',
+        opacity: blocked ? 0.6 : 1,
         ...kindStyles[kind], ...style,
       }}
     >
-      {icon && <Icon name={icon} size={18} />}
+      {loading
+        ? <span style={{ display: 'inline-flex', gap: 4 }}><span className="cm-dot" /><span className="cm-dot" /><span className="cm-dot" /></span>
+        : icon && <Icon name={icon} size={18} />}
       <span>{children}</span>
-      {iconRight && <Icon name={iconRight} size={18} />}
+      {iconRight && !loading && <Icon name={iconRight} size={18} />}
     </button>
   );
 }

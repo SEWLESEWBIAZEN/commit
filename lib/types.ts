@@ -69,6 +69,35 @@ export interface TodayResponse {
   beginner: boolean;
 }
 
+export interface RepoCommit {
+  sha: string;
+  message: string; // first line only
+  authoredAt: string;
+  author: string | null;
+}
+
+export interface AdviceItem {
+  tone: 'amber' | 'green';
+  category: string;
+  text: string;
+}
+
+export interface MoodPoint {
+  value: number; // 0 (no check-in) .. 5
+  committed: boolean;
+}
+
+export interface InsightsData {
+  currentStreak: number;
+  longestStreak: number;
+  daysCounted: number; // days you kept your commitment
+  commitRate: number | null; // 0..100, null when there's no past history yet
+  totalDays: number; // days tracked so far (header "N days")
+  heatmap: number[]; // length 84 (12 weeks × 7), oldest→newest: -1 none/pending, 0 missed, 1..4 kept
+  mood: MoodPoint[]; // last 14 days
+  advice: AdviceItem[]; // recent lessons from the coach
+}
+
 export interface VerdictPayload {
   verdict: ResolveVerdict;
   verdict_title: string;

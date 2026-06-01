@@ -46,9 +46,9 @@ function ExplainRow({ icon, tone, title, body }: { icon: 'check' | 'close'; tone
   );
 }
 
-interface OnboardingScreenProps { step?: OnbStep; onNext?: () => void; onBack?: () => void; onSkip?: () => void; }
+interface OnboardingScreenProps { step?: OnbStep; busy?: boolean; onNext?: () => void; onBack?: () => void; onSkip?: () => void; }
 
-export function OnboardingScreen({ step = 'welcome', onNext, onBack, onSkip }: OnboardingScreenProps) {
+export function OnboardingScreen({ step = 'welcome', busy = false, onNext, onBack, onSkip }: OnboardingScreenProps) {
 
   if (step === 'welcome') {
     return (
@@ -62,7 +62,7 @@ export function OnboardingScreen({ step = 'welcome', onNext, onBack, onSkip }: O
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 'var(--safe-bottom)' }}>
-          <Button kind="solid" icon="branch" onClick={onNext}>Connect GitHub</Button>
+          <Button kind="solid" icon="branch" onClick={onNext} loading={busy}>{busy ? 'Connecting…' : 'Connect GitHub'}</Button>
           <div className="mono" style={{ textAlign: 'center', fontSize: 11.5, color: 'var(--hint)' }}>no password. your GitHub is the login.</div>
         </div>
       </div>
@@ -73,7 +73,7 @@ export function OnboardingScreen({ step = 'welcome', onNext, onBack, onSkip }: O
     return (
       <Scaffold step={step} onBack={onBack} footer={
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <Button kind="solid" icon="lock" onClick={onNext}>Authorize on GitHub</Button>
+          <Button kind="solid" icon="lock" onClick={onNext} loading={busy}>{busy ? 'Redirecting…' : 'Authorize on GitHub'}</Button>
           <Button kind="quiet" onClick={onBack} style={{ fontSize: 13 }}>Not now</Button>
         </div>
       }>

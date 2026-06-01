@@ -2,6 +2,8 @@
 // token. Polling-based (no webhooks): we ask GitHub for the user's recent
 // commits when the app needs to know whether they pushed.
 
+import type { RepoCommit } from '@/lib/types';
+
 const API = 'https://api.github.com';
 
 interface GhOpts {
@@ -70,6 +72,48 @@ export async function latestPushToday(
     commits: commits.length,
     authoredAt: commits[0].commit.author.date,
   };
+}
+
+// Recent commits to a repo, for the Insights feed (one API call, no per-commit stats).
+export async function listRecentCommits(
+  repo: string,
+  { token }: GhOpts,
+  perPage = 12,
+): Promise<RepoCommit[]> {
+  const commits = await gh<
+    {
+      sha: string;
+      commit: { message: string; author: { date: string } };
+      author: { login: string } | null;
+    }[]
+  >(`/repos/${repo}/commits?per_page=${perPage}`, token);
+  return commits.map((c) => ({
+    sha: c.sha,
+    message: c.commit.message.split('\n')[0],
+    authoredAt: c.commit.author.date,
+    author: c.author?.login ?? null,
+  }));
+}
+
+// All commit timestamps in a [since, until) window, paginated. For the monthly
+// commit graph. Returns raw ISO author dates; caller buckets them by local day.
+export async function listCommitsInRange(
+  repo: string,
+  sinceISO: string,
+  untilISO: string,
+  { token }: GhOpts,
+  maxPages = 5,
+): Promise<string[]> {
+  const dates: string[] = [];
+  for (let page = 1; page <= maxPages; page++) {
+    const commits = await gh<{ commit: { author: { date: string } } }[]>(
+      `/repos/${repo}/commits?since=${encodeURIComponent(sinceISO)}&until=${encodeURIComponent(untilISO)}&per_page=100&page=${page}`,
+      token,
+    );
+    for (const c of commits) dates.push(c.commit.author.date);
+    if (commits.length < 100) break;
+  }
+  return dates;
 }
 
 export interface DiffStat {

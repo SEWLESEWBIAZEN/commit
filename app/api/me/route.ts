@@ -20,5 +20,7 @@ export async function GET() {
     hasCommitments: (count ?? 0) > 0,
     streak: ctx.profile.current_streak,
     login: ctx.login,
+    avatar: ctx.profile.github_avatar,
+    timezone: ctx.profile.timezone,
   });
 }
