@@ -1,0 +1,97 @@
+/* ============================================================
+   Commit — global design tokens + base styles
+   GitHub-dark palette · Hanken Grotesk + JetBrains Mono
+   ============================================================ */
+
+:root {
+  /* surfaces */
+  --bg:         #0D1117;
+  --surface:    #161B22;
+  --surface-2:  #1C222B;
+  --border:     #30363D;
+  --border-soft:#21262D;
+
+  /* text */
+  --text:  #E6EDF3;
+  --muted: #8B949E;
+  --hint:  #6E7681;
+
+  /* semantic — strict discipline:
+     green = you showed up (streak/win)
+     amber = the gap (the lesson / critique)
+     red   = missed only — never for being wrong
+     blue  = identity / accent                   */
+  --green:      #3FB950;
+  --green-act:  #238636;
+  --green-dim:  #1f6f33;
+  --amber:      #D29922;
+  --red:        #F85149;
+  --blue:       #1F6FEB;
+
+  /* tinted fills */
+  --green-fill: rgba(63,185,80,0.10);
+  --amber-fill: rgba(210,153,34,0.10);
+  --red-fill:   rgba(248,81,73,0.10);
+  --blue-fill:  rgba(31,111,235,0.12);
+
+  --green-edge: rgba(63,185,80,0.32);
+  --amber-edge: rgba(210,153,34,0.34);
+  --red-edge:   rgba(248,81,73,0.34);
+  --blue-edge:  rgba(31,111,235,0.40);
+
+  /* fonts (CSS vars populated by next/font in layout.tsx) */
+  --font-sans: var(--font-hanken), -apple-system, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* radius */
+  --r-sm: 6px;
+  --r:    8px;
+  --r-lg: 12px;
+
+  /* device safe areas */
+  --safe-top:    54px;
+  --safe-bottom: 34px;
+}
+
+/* ── resets ── */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; }
+body { background: #010409; overflow: hidden; font-family: var(--font-sans); }
+button { font-family: inherit; cursor: pointer; }
+textarea, input { font-family: inherit; }
+
+/* ── utility classes ── */
+.mono {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.02em;
+}
+
+.cm-scroll { overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+.cm-scroll::-webkit-scrollbar { display: none; }
+
+/* ── animated entrance (transform only — no opacity — so screenshots don't blank) ── */
+@keyframes cm-rise {
+  from { transform: translateY(9px); }
+  to   { transform: none; }
+}
+.cm-rise { animation: cm-rise 0.42s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+
+@keyframes cm-pulse { 0%,100%{opacity:.55} 50%{opacity:1} }
+.cm-pulse { animation: cm-pulse 1.8s ease-in-out infinite; }
+
+@keyframes cm-blink { 0%,80%,100%{opacity:.25} 40%{opacity:1} }
+.cm-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: currentColor; animation: cm-blink 1.2s infinite both;
+}
+.cm-dot:nth-child(2) { animation-delay: .18s; }
+.cm-dot:nth-child(3) { animation-delay: .36s; }
+
+/* ── view transitions ── */
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: 0.25s;
+  animation-timing-function: cubic-bezier(0.19, 1, 0.22, 1);
+}
