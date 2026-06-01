@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
         github_login: meta.user_name ?? meta.preferred_username ?? null,
         github_avatar: meta.avatar_url ?? null,
         timezone: tz,
+        email: user.email ?? meta.email ?? null,
       },
       { onConflict: 'id', ignoreDuplicates: false },
     );

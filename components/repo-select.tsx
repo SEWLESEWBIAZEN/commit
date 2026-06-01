@@ -44,47 +44,39 @@ export function RepoSelect({ onSelected }: RepoSelectProps) {
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
-      <div style={{ flexShrink: 0, padding: '14px 20px 0' }}>
+    <div className="flex h-full flex-col bg-bg">
+      <div className="shrink-0 px-5 pt-[14px]">
         <Wordmark />
       </div>
-      <div style={{ padding: '24px 24px 8px', flexShrink: 0 }}>
-        <div style={{ fontSize: 24, lineHeight: 1.2, letterSpacing: '-0.02em', color: 'var(--text)' }}>
+      <div className="shrink-0 px-6 pb-2 pt-6">
+        <div className="text-2xl leading-tight tracking-[-0.02em] text-text">
           Which repo counts?
         </div>
-        <div style={{ fontSize: 14.5, color: 'var(--muted)', marginTop: 10, lineHeight: 1.5 }}>
+        <div className="mt-2.5 text-[14.5px] leading-normal text-muted">
           Commit watches your pushes here to verify the work. You can change it later.
         </div>
         <SectionLabel style={{ marginTop: 22 }}>your repos</SectionLabel>
       </div>
 
-      <div className="cm-scroll" style={{ flex: 1, overflowY: 'auto', padding: '12px 20px' }}>
-        {error && (
-          <div style={{ color: 'var(--red)', fontSize: 13.5, padding: '8px 0' }}>{error}</div>
-        )}
+      <div className="cm-scroll flex-1 overflow-y-auto px-5 py-3">
+        {error && <div className="py-2 text-[13.5px] text-red">{error}</div>}
         {!repos && !error && (
-          <div className="mono" style={{ color: 'var(--hint)', fontSize: 13, padding: '8px 0' }}>
-            loading repos…
-          </div>
+          <div className="mono py-2 text-[13px] text-hint">loading repos…</div>
         )}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="flex flex-col gap-2">
           {repos?.map((r) => {
             const on = chosen === r.full_name;
             return (
               <button
                 key={r.full_name}
                 onClick={() => setChosen(r.full_name)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 11, width: '100%', textAlign: 'left',
-                  padding: '13px 14px', borderRadius: 'var(--r)', cursor: 'pointer',
-                  background: on ? 'var(--green-fill)' : 'var(--surface)',
-                  border: `1px solid ${on ? 'var(--green-edge)' : 'var(--border)'}`,
-                  color: 'var(--text)', transition: 'all .12s',
-                }}
+                className={`flex w-full items-center gap-[11px] rounded border px-[14px] py-[13px] text-left text-text transition-all ${
+                  on ? 'border-green-edge bg-green-fill' : 'border-border bg-surface'
+                }`}
               >
                 <Icon name="branch" size={16} sw={1.8} style={{ color: on ? 'var(--green)' : 'var(--hint)', flexShrink: 0 }} />
-                <span style={{ flex: 1, fontSize: 14.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.full_name}</span>
-                {r.private && <span className="mono" style={{ fontSize: 11, color: 'var(--hint)' }}>private</span>}
+                <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[14.5px]">{r.full_name}</span>
+                {r.private && <span className="mono text-[11px] text-hint">private</span>}
                 {on && <Icon name="check" size={16} sw={2.4} style={{ color: 'var(--green)' }} />}
               </button>
             );
@@ -92,7 +84,7 @@ export function RepoSelect({ onSelected }: RepoSelectProps) {
         </div>
       </div>
 
-      <div style={{ flexShrink: 0, padding: '14px 20px 28px', borderTop: '1px solid var(--border-soft)' }}>
+      <div className="shrink-0 border-t border-border-soft px-5 pb-7 pt-[14px]">
         <Button kind={chosen ? 'green' : 'ghost'} iconRight="arrow" onClick={chosen && !saving ? save : undefined} disabled={!chosen || saving}>
           {saving ? 'Saving…' : 'Use this repo'}
         </Button>

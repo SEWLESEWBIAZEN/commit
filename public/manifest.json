@@ -1,0 +1,19 @@
+{
+  "name": "Commit — daily discipline",
+  "short_name": "Commit",
+  "description": "A daily discipline coach for self-taught developers.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0D1117",
+  "theme_color": "#0D1117",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

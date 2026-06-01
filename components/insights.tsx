@@ -2,15 +2,15 @@
 import React, { useState, useEffect } from 'react';
 import { Icon, SectionLabel, Button } from './ui';
 import { relativeTime } from '@/lib/date';
-import type { InsightsData, MoodPoint, AdviceItem, RepoCommit } from '@/lib/types';
+import type { InsightsData, MoodPoint, AdviceItem, RepoCommit, EmotionLogEntry } from '@/lib/types';
 
 // ── GitHub-green heatmap (12 weeks) ───────────────────────────
 // Authentic GH contribution colors. Cell values: -1 none/pending, 0 missed, 1..4 kept.
 const GH_GREENS = ['#0E4429', '#006D32', '#26A641', '#39D353'];
 
 function bgFor(v: number) {
-  if (v <= -1) return '#161B22';
-  if (v === 0) return '#30363D';
+  if (v <= -1) return 'var(--cell)';
+  if (v === 0) return 'var(--border)';
   return GH_GREENS[Math.min(v, 4) - 1];
 }
 
@@ -47,8 +47,8 @@ function Heatmap({ levels, weeks = 12 }: { levels?: number[]; weeks?: number }) 
   );
 }
 
-// ── Mood bar chart (green = committed, gray = missed/none) ─────
-function MoodBars({ mood }: { mood?: MoodPoint[] }) {
+// ── Mood / energy bar chart (filled = committed, gray = missed/none) ─────
+function MoodBars({ mood, fill = '#26A641' }: { mood?: MoodPoint[]; fill?: string }) {
   const data: MoodPoint[] =
     mood ??
     [4, 3, 5, 2, 4, 4, 3, 1, 4, 5, 3, 4, 2, 5].map((value, i) => ({
@@ -63,11 +63,50 @@ function MoodBars({ mood }: { mood?: MoodPoint[] }) {
           style={{
             flex: 1,
             borderRadius: 2,
-            background: m.committed ? '#26A641' : '#30363D',
+            background: m.value > 0 ? (m.committed ? fill : 'var(--hint)') : 'var(--border)',
             height: `${Math.max(m.value / 5, 0.08) * 100}%`,
             transition: 'height .3s',
           }}
         />
+      ))}
+    </div>
+  );
+}
+
+// ── Reflections (past notes + mood/energy badges) ──────────────
+function ScaleBadge({ label, value, color }: { label: string; value: number | null; color: string }) {
+  if (!value) return null;
+  return (
+    <span className="mono" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10.5, color }}>
+      {label} {value}/5
+    </span>
+  );
+}
+
+function formatRefDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const wd = dt.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' }).toLowerCase();
+  const mo = dt.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }).toLowerCase();
+  return `${wd} · ${mo} ${d}`;
+}
+
+function Reflections({ entries }: { entries: EmotionLogEntry[] }) {
+  if (!entries || entries.length === 0) {
+    return <div style={{ fontSize: 13, color: 'var(--hint)', lineHeight: 1.5 }}>Notes from your check-ins will collect here.</div>;
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {entries.map((e, i) => (
+        <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: e.note ? 8 : 0 }}>
+            <span className="mono" style={{ fontSize: 11, color: 'var(--hint)' }}>{formatRefDate(e.date)}</span>
+            <span style={{ flex: 1 }} />
+            <ScaleBadge label="mood" value={e.mood} color="var(--blue)" />
+            <ScaleBadge label="energy" value={e.energy} color="var(--green)" />
+          </div>
+          {e.note && <div style={{ fontSize: 14, color: 'var(--muted)', lineHeight: 1.55 }}>{e.note}</div>}
+        </div>
       ))}
     </div>
   );
@@ -226,7 +265,7 @@ function StatCard({ label, value, color = 'var(--text)' }: { label: string; valu
 }
 
 // ── Insights screen ────────────────────────────────────────────
-export function InsightsScreen({ data, commits, loading, commitsLoading, onNav }: { data?: InsightsData | null; commits?: RepoCommit[]; loading?: boolean; commitsLoading?: boolean; onNav?: (tab: string) => void }) {
+export function InsightsScreen({ data, commits, loading, commitsLoading, wide, onNav }: { data?: InsightsData | null; commits?: RepoCommit[]; loading?: boolean; commitsLoading?: boolean; wide?: boolean; onNav?: (tab: string) => void }) {
   const [acked, setAcked] = useState<Record<number, boolean>>({});
   const toggle = (i: number) => setAcked(s => ({ ...s, [i]: !s[i] }));
 
@@ -256,7 +295,7 @@ export function InsightsScreen({ data, commits, loading, commitsLoading, onNav }
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: 22, textAlign: 'center' }}>
             <div style={{ display: 'flex', gap: 3, justifyContent: 'center', marginBottom: 16 }}>
               {Array.from({ length: 9 }).map((_, i) => (
-                <div key={i} style={{ width: 12, height: 12, borderRadius: 2.5, background: i === 0 ? '#26A641' : '#161B22', border: i === 0 ? 'none' : '1px solid #21262D' }} />
+                <div key={i} style={{ width: 12, height: 12, borderRadius: 2.5, background: i === 0 ? '#26A641' : 'var(--cell)', border: i === 0 ? 'none' : '1px solid var(--border-soft)' }} />
               ))}
             </div>
             <div style={{ fontSize: 16, color: 'var(--text)' }}>Not enough days yet.</div>
@@ -280,6 +319,79 @@ export function InsightsScreen({ data, commits, loading, commitsLoading, onNav }
     );
   }
 
+  const statBlock = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <StatCard label="current streak" value={String(data.currentStreak)} color="var(--green)" />
+        <StatCard label="commit rate" value={rate(data.commitRate)} />
+      </div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <StatCard label="longest streak" value={String(data.longestStreak)} />
+        <StatCard label="days counted" value={String(data.daysCounted)} />
+      </div>
+    </div>
+  );
+  const monthBlock = (
+    <div>
+      <SectionLabel style={{ marginBottom: 10 }}>commits this month</SectionLabel>
+      <MonthGraph />
+    </div>
+  );
+  const heatmapBlock = (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: 16 }}>
+      <SectionLabel style={{ marginBottom: 12 }}>commitments kept · last 12 weeks</SectionLabel>
+      <Heatmap levels={data.heatmap} />
+    </div>
+  );
+  const moodBlock = (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: 16 }}>
+      <SectionLabel style={{ marginBottom: 12 }}>
+        mood · last 14 days · <span style={{ color: 'var(--green)' }}>green = committed</span>
+      </SectionLabel>
+      <MoodBars mood={data.mood} fill="#26A641" />
+    </div>
+  );
+  const energyBlock = (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: 16 }}>
+      <SectionLabel style={{ marginBottom: 12 }}>
+        energy · last 14 days · <span style={{ color: 'var(--blue)' }}>blue = committed</span>
+      </SectionLabel>
+      <MoodBars mood={data.energy} fill="#1F6FEB" />
+    </div>
+  );
+  const reflectionsBlock = (
+    <div>
+      <SectionLabel style={{ marginBottom: 10 }}>reflections</SectionLabel>
+      <Reflections entries={data.reflections ?? []} />
+    </div>
+  );
+  const commitsBlock = (
+    <div>
+      <SectionLabel style={{ marginBottom: 10 }}>recent commits</SectionLabel>
+      <CommitFeed commits={commits} loading={commitsLoading} />
+    </div>
+  );
+  const adviceBlock = (
+    <div>
+      <SectionLabel style={{ marginBottom: 10 }}>from your coach</SectionLabel>
+      {data.advice.length === 0 ? (
+        <div style={{ fontSize: 13, color: 'var(--hint)', lineHeight: 1.5 }}>
+          Lessons from your resolves will collect here.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {data.advice.map((a: AdviceItem, i) => (
+            <AdviceCard key={i} tone={a.tone} category={a.category} text={a.text} acked={!!acked[i]} onAck={() => toggle(i)} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const col = (children: React.ReactNode) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>{children}</div>
+  );
+
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
       <div style={{ display: 'flex', alignItems: 'center', padding: '10px 20px', flexShrink: 0 }}>
@@ -287,67 +399,15 @@ export function InsightsScreen({ data, commits, loading, commitsLoading, onNav }
         <span className="mono" style={{ fontSize: 12, color: 'var(--hint)' }}>{data.totalDays} days</span>
       </div>
 
-      <div className="cm-scroll" style={{ flex: 1, padding: '4px 20px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
-
-        {/* stat cards */}
-        <div style={{ display: 'flex', gap: 10 }}>
-          <StatCard label="current streak" value={String(data.currentStreak)} color="var(--green)" />
-          <StatCard label="commit rate" value={rate(data.commitRate)} />
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <StatCard label="longest streak" value={String(data.longestStreak)} />
-          <StatCard label="days counted" value={String(data.daysCounted)} />
-        </div>
-
-        {/* monthly commit graph */}
-        <div>
-          <SectionLabel style={{ marginBottom: 10 }}>commits this month</SectionLabel>
-          <MonthGraph />
-        </div>
-
-        {/* kept-commitment heatmap */}
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: 16 }}>
-          <SectionLabel style={{ marginBottom: 12 }}>commitments kept · last 12 weeks</SectionLabel>
-          <Heatmap levels={data.heatmap} />
-        </div>
-
-        {/* mood bar chart */}
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r)', padding: 16 }}>
-          <SectionLabel style={{ marginBottom: 12 }}>
-            mood · last 14 days · <span style={{ color: 'var(--green)' }}>green = committed</span>
-          </SectionLabel>
-          <MoodBars mood={data.mood} />
-        </div>
-
-        {/* recent commits */}
-        <div>
-          <SectionLabel style={{ marginBottom: 10 }}>recent commits</SectionLabel>
-          <CommitFeed commits={commits} loading={commitsLoading} />
-        </div>
-
-        {/* coach advice */}
-        <div>
-          <SectionLabel style={{ marginBottom: 10 }}>from your coach</SectionLabel>
-          {data.advice.length === 0 ? (
-            <div style={{ fontSize: 13, color: 'var(--hint)', lineHeight: 1.5 }}>
-              Lessons from your resolves will collect here.
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {data.advice.map((a: AdviceItem, i) => (
-                <AdviceCard
-                  key={i}
-                  tone={a.tone}
-                  category={a.category}
-                  text={a.text}
-                  acked={!!acked[i]}
-                  onAck={() => toggle(i)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
+      <div className="cm-scroll" style={{ flex: 1, overflowY: 'auto', padding: '4px 20px 24px' }}>
+        {wide ? (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, alignItems: 'start' }}>
+            {col(<>{statBlock}{monthBlock}{heatmapBlock}{commitsBlock}</>)}
+            {col(<>{moodBlock}{energyBlock}{reflectionsBlock}{adviceBlock}</>)}
+          </div>
+        ) : (
+          col(<>{statBlock}{monthBlock}{heatmapBlock}{moodBlock}{energyBlock}{reflectionsBlock}{commitsBlock}{adviceBlock}</>)
+        )}
       </div>
     </div>
   );

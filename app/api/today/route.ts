@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { latestPushToday, commitDiffStat } from '@/lib/github';
 import { todayInTz, startOfTodayUtc, minutesSince } from '@/lib/date';
+import { notifyMissed } from '@/lib/notify';
 import type { Commitment, Resolution, TodayResponse } from '@/lib/types';
 
 export async function GET() {
@@ -18,6 +19,7 @@ export async function GET() {
   const prevStreak = ctx.profile.current_streak;
   const beginner = streak < 7;
   const repo = ctx.repo;
+  const partnerEmail = ctx.profile.partner_email;
 
   // Today's commitment (the one due today).
   const { data: todays } = await supabase
@@ -41,11 +43,21 @@ export async function GET() {
   if (pastOpen) {
     // Burn the streak and mark the day missed so this only fires once.
     const admin = createAdminClient();
-    await admin.from('commitments').update({ status: 'missed' }).eq('id', pastOpen.id);
+    await admin
+      .from('commitments')
+      .update({ status: 'missed', partner_notified: true })
+      .eq('id', pastOpen.id);
     await admin
       .from('profiles')
       .update({ current_streak: 0 })
       .eq('id', ctx.userId);
+
+    // Notify (partner email + push to the user). Only fires once because the
+    // commitment flips to 'missed' above and won't be re-detected.
+    if (!pastOpen.partner_notified) {
+      await notifyMissed(ctx.profile, prevStreak, pastOpen.body);
+    }
+
     streak = 0;
 
     const res: TodayResponse = {
@@ -57,6 +69,7 @@ export async function GET() {
       push: null,
       resolution: null,
       beginner: true,
+      partnerEmail,
     };
     return NextResponse.json(res);
   }
@@ -72,6 +85,7 @@ export async function GET() {
       push: null,
       resolution: null,
       beginner,
+      partnerEmail,
     };
     return NextResponse.json(res);
   }
@@ -96,6 +110,7 @@ export async function GET() {
       push: null,
       resolution,
       beginner,
+      partnerEmail,
     };
     return NextResponse.json(res);
   }
@@ -136,6 +151,7 @@ export async function GET() {
     push,
     resolution: null,
     beginner,
+    partnerEmail,
   };
   return NextResponse.json(res);
 }

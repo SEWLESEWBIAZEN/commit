@@ -85,7 +85,7 @@ export function CommitScreen({
       </div>
 
       {/* footer CTA */}
-      <div style={{ flexShrink: 0, padding: '14px 20px 28px', borderTop: '1px solid var(--border-soft)', background: 'rgba(13,17,23,0.9)' }}>
+      <div style={{ flexShrink: 0, padding: '14px 20px 28px', borderTop: '1px solid var(--border-soft)', background: 'var(--bg)' }}>
         <Button kind={empty ? 'ghost' : 'green'} icon="commit" onClick={onSeal} disabled={empty} loading={loading}>
           {loading ? 'Sealing…' : 'Seal tomorrow’s commitment'}
         </Button>

@@ -10,6 +10,34 @@ export interface Profile {
   longest_streak: number;
   last_counted_date: string | null;
   created_at: string;
+  // notifications + accountability (migration 0002)
+  email: string | null;
+  reminder_time: string; // 'HH:MM' local to timezone
+  reminders_enabled: boolean;
+  email_enabled: boolean;
+  push_enabled: boolean;
+  partner_email: string | null;
+  last_reminder_date: string | null;
+}
+
+// A stored Web Push endpoint (one per browser/device).
+export interface PushSubscriptionRow {
+  id: string;
+  user_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  created_at: string;
+}
+
+// The user-editable notification + accountability preferences.
+export interface NotificationSettings {
+  reminderTime: string; // 'HH:MM'
+  remindersEnabled: boolean;
+  emailEnabled: boolean;
+  pushEnabled: boolean;
+  partnerEmail: string | null;
+  email: string | null; // the user's own email (read-only, from GitHub)
 }
 
 export interface Commitment {
@@ -20,6 +48,7 @@ export interface Commitment {
   target_date: string; // YYYY-MM-DD
   repo: string | null;
   status: 'open' | 'kept' | 'missed';
+  partner_notified: boolean;
   created_at: string;
 }
 
@@ -67,6 +96,7 @@ export interface TodayResponse {
   push: PushInfo | null;
   resolution: Resolution | null;
   beginner: boolean;
+  partnerEmail: string | null;
 }
 
 export interface RepoCommit {
@@ -87,6 +117,14 @@ export interface MoodPoint {
   committed: boolean;
 }
 
+// One past emotion check-in, for the reflections history list.
+export interface EmotionLogEntry {
+  date: string; // YYYY-MM-DD (local)
+  mood: number | null; // 1..5
+  energy: number | null; // 1..5
+  note: string | null;
+}
+
 export interface InsightsData {
   currentStreak: number;
   longestStreak: number;
@@ -95,6 +133,8 @@ export interface InsightsData {
   totalDays: number; // days tracked so far (header "N days")
   heatmap: number[]; // length 84 (12 weeks × 7), oldest→newest: -1 none/pending, 0 missed, 1..4 kept
   mood: MoodPoint[]; // last 14 days
+  energy: MoodPoint[]; // last 14 days (parallel to mood)
+  reflections: EmotionLogEntry[]; // recent check-ins that carry a note
   advice: AdviceItem[]; // recent lessons from the coach
 }
 

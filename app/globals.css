@@ -1,10 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
+  color-scheme: dark;
   /* surfaces */
+  --page-bg:    #010409;
   --bg:         #0D1117;
   --surface:    #161B22;
   --surface-2:  #1C222B;
   --border:     #30363D;
   --border-soft:#21262D;
+  /* neutral grid cell (heatmap "no data") */
+  --cell:       #161B22;
 
   /* text */
   --text:  #E6EDF3;
@@ -43,10 +51,43 @@
   --safe-bottom: 34px;
 }
 
+/* ── light theme (GitHub-light palette) ── */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --page-bg:    #eaeef2;
+  --bg:         #ffffff;
+  --surface:    #f6f8fa;
+  --surface-2:  #eaeef2;
+  --border:     #d0d7de;
+  --border-soft:#e4e8ec;
+  --cell:       #ebedf0;
+
+  --text:  #1f2328;
+  --muted: #57606a;
+  --hint:  #818b98;
+
+  --green:      #1a7f37;
+  --green-act:  #1f883d;
+  --green-dim:  #116329;
+  --amber:      #9a6700;
+  --red:        #cf222e;
+  --blue:       #0969da;
+
+  --green-fill: rgba(31,136,61,0.12);
+  --amber-fill: rgba(154,103,0,0.12);
+  --red-fill:   rgba(207,34,46,0.10);
+  --blue-fill:  rgba(9,105,218,0.10);
+
+  --green-edge: rgba(31,136,61,0.35);
+  --amber-edge: rgba(154,103,0,0.35);
+  --red-edge:   rgba(207,34,46,0.35);
+  --blue-edge:  rgba(9,105,218,0.40);
+}
+
 /* ── resets ── */
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; height: 100%; }
-body { background: #010409; overflow: hidden; font-family: var(--font-sans); }
+body { background: var(--page-bg); overflow: hidden; font-family: var(--font-sans); }
 button { font-family: inherit; cursor: pointer; }
 textarea, input { font-family: inherit; }
 

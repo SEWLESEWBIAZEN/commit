@@ -67,6 +67,10 @@ interface EvaluateArgs {
   diff: string;
   question: string;
   answer: string;
+  // A short, human-readable summary of the developer's recent mood/energy
+  // check-ins (e.g. "energy has been low (avg 2/5) over the last 5 days").
+  // Used to shape the lesson + tomorrow's suggestion, never the verdict.
+  moodContext?: string;
 }
 
 const VERDICT_TOOL: Anthropic.Tool = {
@@ -98,6 +102,7 @@ export async function evaluateAnswer({
   diff,
   question,
   answer,
+  moodContext,
 }: EvaluateArgs): Promise<VerdictPayload> {
   const msg = await client().messages.create({
     model: MODEL,
@@ -115,7 +120,11 @@ export async function evaluateAnswer({
           "- Only withhold the streak (verdict 'none') when the answer is evasive: it dodges the " +
           'question, merely restates what the code does, or bluffs without real understanding.\n' +
           '- Always give a lesson that teaches the next level, grounded in their specific diff.\n' +
-          '- The suggestion must be a concrete thing they could build/push tomorrow.',
+          '- The suggestion must be a concrete thing they could build/push tomorrow.\n' +
+          '- You may be given recent mood/energy context. NEVER let it affect the verdict. Use it ' +
+          'only to right-size tomorrow\'s suggestion (lighter scope on a low-energy run, a stretch ' +
+          'when they\'re flying) and, when it clearly fits, to add one brief, non-preachy line of ' +
+          'human encouragement in the lesson. If no context is given, ignore this rule.',
         cache_control: { type: 'ephemeral' },
       },
     ],
@@ -128,7 +137,8 @@ export async function evaluateAnswer({
           `Commitment: "${commitmentBody}"\n\n` +
           `Diff:\n${diff || '(no diff text available)'}\n\n` +
           `Question asked: ${question}\n\n` +
-          `Their answer: ${answer}`,
+          `Their answer: ${answer}` +
+          (moodContext ? `\n\nRecent mood/energy (context only, not for the verdict): ${moodContext}` : ''),
       },
     ],
   });

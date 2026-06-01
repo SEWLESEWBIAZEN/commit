@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import type { ResolvePhase, ResolveVerdict, CommitType, NavTab, OnbStep } from '@/components/types';
-import type { TodayResponse, VerdictPayload, InsightsData, RepoCommit } from '@/lib/types';
+import type { TodayResponse, VerdictPayload, InsightsData, RepoCommit, NotificationSettings } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import { BottomNav } from '@/components/ui';
 import { TodayScreen } from '@/components/today';
@@ -10,8 +10,41 @@ import { ResolveScreen } from '@/components/resolve';
 import { CommitScreen } from '@/components/commitment';
 import { OnboardingScreen } from '@/components/onboarding';
 import { InsightsScreen } from '@/components/insights';
-import { SettingsScreen } from '@/components/settings';
+import { SettingsScreen, type SettingsPatch } from '@/components/settings';
 import { RepoSelect } from '@/components/repo-select';
+import { SideNav } from '@/components/side-nav';
+import { subscribeToPush, unsubscribeFromPush, pushSupported } from '@/lib/push-client';
+
+type Theme = 'light' | 'dark';
+
+// Reads the theme set on <html> by the no-flash script in layout.tsx, and
+// persists changes to localStorage.
+function useTheme(): { theme: Theme; setTheme: (t: Theme) => void } {
+  const [theme, setThemeState] = useState<Theme>('dark');
+  useEffect(() => {
+    const t = (document.documentElement.dataset.theme as Theme) || 'dark';
+    setThemeState(t === 'light' ? 'light' : 'dark');
+  }, []);
+  const setTheme = useCallback((t: Theme) => {
+    document.documentElement.dataset.theme = t;
+    try { localStorage.setItem('theme', t); } catch { /* ignore */ }
+    setThemeState(t);
+  }, []);
+  return { theme, setTheme };
+}
+
+// True on wide (desktop) viewports. SSR-safe: starts false, resolves on mount.
+function useIsDesktop(breakpoint = 1024): boolean {
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia(`(min-width: ${breakpoint}px)`);
+    const sync = () => setIsDesktop(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, [breakpoint]);
+  return isDesktop;
+}
 
 interface Me {
   authed: boolean;
@@ -63,10 +96,16 @@ export default function App() {
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [commits, setCommits] = useState<RepoCommit[]>([]);
   const [commitsLoading, setCommitsLoading] = useState(false);
+  const [settings, setSettings] = useState<NotificationSettings | null>(null);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [settingsNotice, setSettingsNotice] = useState<string | null>(null);
+  const [testBusy, setTestBusy] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [emotionBusy, setEmotionBusy] = useState(false);
   const [tab, setTab] = useState<NavTab>('today');
+  const isDesktop = useIsDesktop();
+  const { theme, setTheme } = useTheme();
   const [err, setErr] = useState<string | null>(null);
 
   // onboarding (pre-auth) sub-step
@@ -147,7 +186,79 @@ export default function App() {
         .then((d) => setCommits(d.commits ?? []))
         .finally(() => setCommitsLoading(false));
     }
+    if (tab === 'settings') {
+      setSettingsNotice(null);
+      fetch('/api/settings')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d: NotificationSettings | null) => d && setSettings(d));
+    }
   }, [tab]);
+
+  // ── settings handlers ───────────────────────────────────────
+  const saveSettings = useCallback((patch: SettingsPatch) => {
+    setSettings((s) => (s ? { ...s, ...patch } : s));
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: JSON_HEADERS,
+      body: JSON.stringify(patch),
+    }).catch(() => {});
+  }, []);
+
+  const togglePush = useCallback(async (next: boolean) => {
+    setPushBusy(true);
+    setSettingsNotice(null);
+    try {
+      if (next) {
+        const result = await subscribeToPush();
+        if (result === 'subscribed') {
+          setSettings((s) => (s ? { ...s, pushEnabled: true } : s));
+        } else {
+          const msg =
+            result === 'denied' ? 'Notifications are blocked. Enable them in your browser settings, then try again.'
+            : result === 'unsupported' ? 'This browser doesn’t support push notifications. On iPhone, add Commit to your home screen first.'
+            : result === 'no-key' ? 'Push isn’t configured on the server (missing VAPID key).'
+            : 'Couldn’t enable push notifications. Please try again.';
+          setSettingsNotice(msg);
+        }
+      } else {
+        await unsubscribeFromPush();
+        setSettings((s) => (s ? { ...s, pushEnabled: false } : s));
+        await fetch('/api/push/unsubscribe', { method: 'POST', headers: JSON_HEADERS, body: '{}' }).catch(() => {});
+      }
+    } finally {
+      setPushBusy(false);
+    }
+  }, []);
+
+  const sendTest = useCallback(async () => {
+    setTestBusy(true);
+    setSettingsNotice(null);
+    try {
+      const res = await fetch('/api/notifications/test', { method: 'POST' });
+      if (!res.ok) { setSettingsNotice('Couldn’t send the test. Please try again.'); return; }
+      const d = (await res.json()) as {
+        push: { sent: number; reason: string | null };
+        email: { sent: boolean; to: string | null; reason: string | null };
+      };
+
+      const pushMsg =
+        d.push.sent > 0 ? `Push sent to ${d.push.sent} device${d.push.sent === 1 ? '' : 's'}.`
+        : d.push.reason === 'no_subscription' ? 'Push: turn on Push notifications first.'
+        : d.push.reason === 'not_configured' ? 'Push: not configured on the server.'
+        : 'Push: nothing sent.';
+      const emailMsg =
+        d.email.sent ? `Email sent to ${d.email.to}.`
+        : d.email.reason === 'not_configured' ? 'Email: SMTP not configured on the server.'
+        : d.email.reason === 'no_address' ? 'Email: no address on your account.'
+        : 'Email: send failed.';
+
+      setSettingsNotice(`${pushMsg} ${emailMsg}`);
+    } catch {
+      setSettingsNotice('Couldn’t send the test. Please try again.');
+    } finally {
+      setTestBusy(false);
+    }
+  }, []);
 
   const disconnect = async () => {
     setDisconnecting(true);
@@ -159,6 +270,7 @@ export default function App() {
     setToday(null);
     setInsights(null);
     setCommits([]);
+    setSettings(null);
     setOverlay(null);
     setTab('today');
     setOnbStep('welcome');
@@ -412,11 +524,30 @@ export default function App() {
 
   let body: React.ReactNode;
   if (tab === 'insights') {
-    body = <InsightsScreen data={insights} commits={commits} loading={insightsLoading} commitsLoading={commitsLoading} onNav={(t: string) => setTab(t as NavTab)} />;
+    body = <InsightsScreen data={insights} commits={commits} loading={insightsLoading} commitsLoading={commitsLoading} wide={isDesktop} onNav={(t: string) => setTab(t as NavTab)} />;
   } else if (tab === 'settings') {
-    body = <SettingsScreen login={me.login} avatar={me.avatar} timezone={me.timezone} repo={me.repo} disconnecting={disconnecting} onDisconnect={disconnect} />;
+    body = (
+      <SettingsScreen
+        login={me.login}
+        avatar={me.avatar}
+        timezone={me.timezone}
+        repo={me.repo}
+        disconnecting={disconnecting}
+        onDisconnect={disconnect}
+        settings={settings}
+        onSaveSettings={saveSettings}
+        onTogglePush={togglePush}
+        pushBusy={pushBusy}
+        pushSupported={pushSupported()}
+        notice={settingsNotice}
+        onTest={sendTest}
+        testBusy={testBusy}
+        theme={theme}
+        onSetTheme={setTheme}
+      />
+    );
   } else if (!today) {
-    return <Splash label="loading today" />;
+    body = <LoadingPane label="loading today" />;
   } else {
     body = (
       <TodayScreen
@@ -433,6 +564,7 @@ export default function App() {
         pushAdd={today.push?.additions}
         pushDel={today.push?.deletions}
         pushFiles={today.push?.files}
+        partnerEmail={today.partnerEmail}
         onResolve={onResolve}
         onSetCommitment={() => openCommit(today.state === 'rest' ? 'tomorrow' : 'today')}
         onView={viewResolution}
@@ -440,12 +572,62 @@ export default function App() {
     );
   }
 
+  // ── desktop: sidebar + content area, overlays as centered modals ──
+  if (isDesktop) {
+    const mainMax = tab === 'insights' || tab === 'insightsEmpty' ? 1040 : tab === 'settings' ? 640 : 600;
+    return (
+      <div style={{ display: 'flex', height: '100vh', background: 'var(--bg)', overflow: 'hidden' }}>
+        <SideNav
+          active={tab === 'insightsEmpty' ? 'insights' : tab}
+          onNav={(t: string) => setTab(t as NavTab)}
+          login={me.login}
+          avatar={me.avatar}
+          streak={today?.streak ?? me.streak}
+          theme={theme}
+          onSetTheme={setTheme}
+        />
+        <main style={{ flex: 1, minWidth: 0, height: '100vh', display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
+          <div style={{ width: '100%', maxWidth: mainMax, height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            {body}
+          </div>
+        </main>
+        {overlay && <CenterModal>{renderOverlay()}</CenterModal>}
+        {preparing && <Preparing />}
+        <ErrorToast err={err} />
+      </div>
+    );
+  }
+
+  // ── mobile: single column + bottom tab bar, overlays full-screen ──
   return (
     <Shell nav={overlay ? undefined : <BottomNav active={tab === 'insightsEmpty' ? 'insights' : tab} onNav={(t: string) => setTab(t as NavTab)} />}>
       {overlay ? renderOverlay() : body}
       {preparing && <Preparing />}
       <ErrorToast err={err} />
     </Shell>
+  );
+}
+
+// Centered modal card for overlays (Resolve / Commit) on desktop.
+function CenterModal({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(1,4,9,0.62)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <div style={{ width: '100%', maxWidth: 460, height: 'min(90vh, 880px)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden', boxShadow: '0 30px 90px rgba(0,0,0,0.6)' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// Inline loading filler (used inside the shell/content area, no full-screen wrapper).
+function LoadingPane({ label }: { label: string }) {
+  return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--hint)' }}>
+      <span className="mono" style={{ fontSize: 13, display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+        <span style={{ display: 'inline-flex', gap: 4, color: 'var(--blue)' }}><span className="cm-dot" /><span className="cm-dot" /><span className="cm-dot" /></span>
+        {label}
+      </span>
+    </div>
   );
 }
 

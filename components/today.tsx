@@ -74,6 +74,7 @@ interface TodayScreenProps {
   pushAdd?: number;
   pushDel?: number;
   pushFiles?: number;
+  partnerEmail?: string | null;
   onResolve?: () => void;
   onSetCommitment?: () => void;
   onView?: () => void;
@@ -84,6 +85,7 @@ export function TodayScreen({
   commitment = 'Add refresh-token rotation to the auth flow.',
   ctype = 'build', beginner = false, heroVariant = 'number',
   date, pushCommits = 2, pushMinutesAgo = 14, pushAdd = 142, pushDel = 37, pushFiles = 4,
+  partnerEmail,
   onResolve, onSetCommitment, onView,
 }: TodayScreenProps) {
 
@@ -130,10 +132,12 @@ export function TodayScreen({
             </div>
           </div>
           {/* accountability ping */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Icon name="bell" size={15} style={{ color: 'var(--hint)', flexShrink: 0 }} />
-            <span style={{ fontSize: 12, color: 'var(--hint)' }}>Sara was notified &mdash; the deal you set</span>
-          </div>
+          {partnerEmail && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Icon name="bell" size={15} style={{ color: 'var(--hint)', flexShrink: 0 }} />
+              <span style={{ fontSize: 12, color: 'var(--hint)' }}>{partnerEmail} was notified &mdash; the deal you set</span>
+            </div>
+          )}
           <Button kind="green" iconRight="arrow" onClick={onSetCommitment}>Set tomorrow&rsquo;s promise</Button>
         </div>
       </Scaffold>

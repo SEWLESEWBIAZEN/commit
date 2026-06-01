@@ -229,7 +229,7 @@ export function BottomNav({ active, onNav }: BottomNavProps) {
     { id: 'settings', label: 'Settings', icon: 'gear' as IconName },
   ];
   return (
-    <div style={{ display: 'flex', borderTop: '1px solid var(--border-soft)', background: 'rgba(13,17,23,0.86)', backdropFilter: 'blur(12px)', paddingBottom: 'var(--safe-bottom)', flexShrink: 0 }}>
+    <div style={{ display: 'flex', borderTop: '1px solid var(--border-soft)', background: 'var(--bg)', paddingBottom: 'var(--safe-bottom)', flexShrink: 0 }}>
       {tabs.map(t => {
         const on = active === t.id || (active === 'insightsEmpty' && t.id === 'insights');
         return (

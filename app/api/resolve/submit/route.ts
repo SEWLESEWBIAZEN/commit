@@ -3,6 +3,7 @@ import { getContext } from '@/lib/server-context';
 import { createClient } from '@/lib/supabase/server';
 import { commitDiffStat } from '@/lib/github';
 import { evaluateAnswer } from '@/lib/coach';
+import { buildMoodContext, type MoodSample } from '@/lib/mood';
 
 // Judge the answer against the diff. Persists a resolution only when it counts
 // (verdict 'good' | 'wrong'); an evasive 'none' returns the verdict so the user
@@ -32,12 +33,23 @@ export async function POST(request: NextRequest) {
       .eq('id', commitment_id)
       .maybeSingle<{ body: string }>();
 
+    // Recent emotion check-ins shape tomorrow's suggestion (not the verdict).
+    const { data: recent } = await supabase
+      .from('resolutions')
+      .select('mood, energy')
+      .eq('user_id', ctx.userId)
+      .order('created_at', { ascending: false })
+      .limit(7)
+      .returns<MoodSample[]>();
+    const moodContext = buildMoodContext(recent ?? []);
+
     const stat = await commitDiffStat(ctx.repo, commit_sha, { token: ctx.token });
     const verdict = await evaluateAnswer({
       commitmentBody: commitment?.body ?? '',
       diff: stat.patch,
       question,
       answer,
+      moodContext,
     });
 
     const counted = verdict.verdict !== 'none';

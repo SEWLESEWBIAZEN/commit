@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server';
 import { getContext } from '@/lib/server-context';
 import { createClient } from '@/lib/supabase/server';
-import { todayInTz, dateInTz } from '@/lib/date';
-import type { AdviceItem, InsightsData, MoodPoint } from '@/lib/types';
+import { todayInTz, dateInTz, tzDateOf } from '@/lib/date';
+import type { AdviceItem, EmotionLogEntry, InsightsData, MoodPoint } from '@/lib/types';
 
 interface CommitRow { id: string; target_date: string; status: string }
 interface ResRow {
   commitment_id: string;
   counted: boolean;
   mood: number | null;
+  energy: number | null;
+  note: string | null;
   additions: number;
   verdict: string | null;
   lesson_title: string | null;
@@ -40,7 +42,7 @@ export async function GET() {
       .returns<CommitRow[]>(),
     supabase
       .from('resolutions')
-      .select('commitment_id, counted, mood, additions, verdict, lesson_title, lesson_body, created_at')
+      .select('commitment_id, counted, mood, energy, note, additions, verdict, lesson_title, lesson_body, created_at')
       .eq('user_id', ctx.userId)
       .eq('counted', true)
       .order('created_at', { ascending: false })
@@ -55,12 +57,12 @@ export async function GET() {
   for (const r of resList) if (!resByCommit.has(r.commitment_id)) resByCommit.set(r.commitment_id, r);
 
   // Per-date status.
-  type Day = { status: 'kept' | 'missed' | 'pending'; mood: number | null; additions: number };
+  type Day = { status: 'kept' | 'missed' | 'pending'; mood: number | null; energy: number | null; additions: number };
   const byDate = new Map<string, Day>();
   for (const c of commitList) {
     const r = resByCommit.get(c.id);
     const status: Day['status'] = r ? 'kept' : c.target_date < today ? 'missed' : 'pending';
-    byDate.set(c.target_date, { status, mood: r?.mood ?? null, additions: r?.additions ?? 0 });
+    byDate.set(c.target_date, { status, mood: r?.mood ?? null, energy: r?.energy ?? null, additions: r?.additions ?? 0 });
   }
 
   // Heatmap: last 84 days, oldest → newest.
@@ -73,13 +75,26 @@ export async function GET() {
     else heatmap.push(level(e.additions));
   }
 
-  // Mood: last 14 days.
+  // Mood + energy: last 14 days (parallel series).
   const mood: MoodPoint[] = [];
+  const energy: MoodPoint[] = [];
   for (let i = 13; i >= 0; i--) {
     const d = dateInTz(tz, -i);
     const e = byDate.get(d);
     mood.push({ value: e?.mood ?? 0, committed: e?.status === 'kept' });
+    energy.push({ value: e?.energy ?? 0, committed: e?.status === 'kept' });
   }
+
+  // Reflections: recent check-ins that carry a note (the journal view).
+  const reflections: EmotionLogEntry[] = resList
+    .filter((r) => (r.note && r.note.trim()) || r.mood || r.energy)
+    .slice(0, 30)
+    .map((r) => ({
+      date: tzDateOf(r.created_at, tz),
+      mood: r.mood,
+      energy: r.energy,
+      note: r.note?.trim() || null,
+    }));
 
   // Commit rate over fully-past commitments.
   const past = commitList.filter((c) => c.target_date < today);
@@ -106,6 +121,8 @@ export async function GET() {
     totalDays,
     heatmap,
     mood,
+    energy,
+    reflections,
     advice,
   };
 
