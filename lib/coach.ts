@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import type { VerdictPayload } from '@/lib/types';
 
 // The coach. Server-only. Reads the actual diff, asks one pointed question,
@@ -6,12 +6,19 @@ import type { VerdictPayload } from '@/lib/types';
 //   honesty + understanding keeps the streak (verdict 'good' or 'wrong');
 //   evasiveness / bluffing does not (verdict 'none').
 // "Strict about the code, on your side about the person."
+//
+// Backed by an OpenAI-compatible endpoint (NVIDIA-hosted gpt-oss).
 
-const MODEL = 'claude-sonnet-4-6';
+const MODEL = 'openai/gpt-oss-20b';
 
-let _client: Anthropic | null = null;
+let _client: OpenAI | null = null;
 function client() {
-  if (!_client) _client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+  if (!_client) {
+    _client = new OpenAI({
+      apiKey: process.env.NVIDIA_API_KEY!,
+      baseURL: 'https://integrate.api.nvidia.com/v1',
+    });
+  }
   return _client;
 }
 
@@ -28,22 +35,20 @@ interface QuestionArgs {
 
 // One pointed question about the actual change. Returns a single sentence.
 export async function generateQuestion({ commitmentBody, diff }: QuestionArgs): Promise<string> {
-  const msg = await client().messages.create({
+  const completion = await client().chat.completions.create({
     model: MODEL,
-    max_tokens: 200,
-    system: [
+    temperature: 0.7,
+    max_tokens: 1024,
+    messages: [
       {
-        type: 'text',
-        text:
+        role: 'system',
+        content:
           COACH_PERSONA +
           '\n\nAsk exactly ONE question that probes whether they understand a meaningful ' +
           'decision or tradeoff in THIS diff — not trivia, not something answerable without ' +
           'having written it. Reference something concrete from the diff. Output only the ' +
           'question, no preamble, no quotes.',
-        cache_control: { type: 'ephemeral' },
       },
-    ],
-    messages: [
       {
         role: 'user',
         content:
@@ -53,12 +58,7 @@ export async function generateQuestion({ commitmentBody, diff }: QuestionArgs): 
     ],
   });
 
-  const text = msg.content
-    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
-    .map((b) => b.text)
-    .join('')
-    .trim();
-
+  const text = (completion.choices[0]?.message?.content ?? '').trim();
   return text || 'Walk me through the most important decision in this change — and what you traded off.';
 }
 
@@ -73,29 +73,43 @@ interface EvaluateArgs {
   moodContext?: string;
 }
 
-const VERDICT_TOOL: Anthropic.Tool = {
-  name: 'render_verdict',
-  description: 'Render the two-part verdict for the developer.',
-  input_schema: {
-    type: 'object',
-    properties: {
-      verdict: {
-        type: 'string',
-        enum: ['good', 'wrong', 'none'],
-        description:
-          "'good' = honest and correct understanding; 'wrong' = honest attempt but the " +
-          "understanding is off (still counts — being wrong is fine); 'none' = evasive, " +
-          'bluffed, or described what the code does without showing understanding (does NOT count).',
-      },
-      verdict_title: { type: 'string', description: 'Short headline for the streak verdict (<= 8 words).' },
-      verdict_body: { type: 'string', description: 'One or two sentences on whether it counts and why. Warm but honest.' },
-      lesson_title: { type: 'string', description: 'Short headline for the lesson (<= 8 words).' },
-      lesson_body: { type: 'string', description: 'The actual teaching: what they missed or the next level. Specific to the diff.' },
-      suggestion: { type: 'string', description: "A concrete, buildable commitment for tomorrow that follows from the lesson." },
-    },
-    required: ['verdict', 'verdict_title', 'verdict_body', 'lesson_title', 'lesson_body', 'suggestion'],
-  },
-};
+// Pull the first JSON object out of a model response (which may be wrapped in
+// code fences or preceded by prose/reasoning).
+function extractJson(raw: string): Record<string, unknown> {
+  let s = raw.trim();
+  const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) s = fence[1].trim();
+  const start = s.indexOf('{');
+  const end = s.lastIndexOf('}');
+  if (start === -1 || end === -1 || end < start) throw new Error('coach returned no JSON');
+  return JSON.parse(s.slice(start, end + 1)) as Record<string, unknown>;
+}
+
+const VERDICT_INSTRUCTIONS =
+  COACH_PERSONA +
+  '\n\nYou asked the developer one question about their diff. Judge their answer ' +
+  'against the actual diff.\n\n' +
+  'RULES:\n' +
+  "- The streak is about honesty and understanding, NOT correctness. A wrong-but-honest " +
+  "answer COUNTS (verdict 'wrong'). Say so plainly so they are not punished for being wrong.\n" +
+  "- Only withhold the streak (verdict 'none') when the answer is evasive: it dodges the " +
+  'question, merely restates what the code does, or bluffs without real understanding.\n' +
+  '- Always give a lesson that teaches the next level, grounded in their specific diff.\n' +
+  '- The suggestion must be a concrete thing they could build/push tomorrow.\n' +
+  '- You may be given recent mood/energy context. NEVER let it affect the verdict. Use it ' +
+  "only to right-size tomorrow's suggestion (lighter scope on a low-energy run, a stretch " +
+  "when they're flying) and, when it clearly fits, to add one brief, non-preachy line of " +
+  'human encouragement in the lesson. If no context is given, ignore this rule.\n\n' +
+  'Respond with ONLY a single JSON object (no prose, no code fences) with exactly these keys:\n' +
+  '  "verdict": one of "good" | "wrong" | "none"\n' +
+  "    ('good' = honest and correct understanding; 'wrong' = honest attempt but the " +
+  "understanding is off — still counts; 'none' = evasive, bluffed, or just restated what " +
+  'the code does — does NOT count)\n' +
+  '  "verdict_title": short headline for the streak verdict (<= 8 words)\n' +
+  '  "verdict_body": one or two sentences on whether it counts and why — warm but honest\n' +
+  '  "lesson_title": short headline for the lesson (<= 8 words)\n' +
+  '  "lesson_body": the actual teaching — what they missed or the next level, specific to the diff\n' +
+  '  "suggestion": a concrete, buildable commitment for tomorrow that follows from the lesson';
 
 export async function evaluateAnswer({
   commitmentBody,
@@ -104,33 +118,12 @@ export async function evaluateAnswer({
   answer,
   moodContext,
 }: EvaluateArgs): Promise<VerdictPayload> {
-  const msg = await client().messages.create({
+  const completion = await client().chat.completions.create({
     model: MODEL,
-    max_tokens: 700,
-    system: [
-      {
-        type: 'text',
-        text:
-          COACH_PERSONA +
-          '\n\nYou asked the developer one question about their diff. Judge their answer ' +
-          'against the actual diff and call render_verdict.\n\n' +
-          'RULES:\n' +
-          "- The streak is about honesty and understanding, NOT correctness. A wrong-but-honest " +
-          "answer COUNTS (verdict 'wrong'). Say so plainly so they are not punished for being wrong.\n" +
-          "- Only withhold the streak (verdict 'none') when the answer is evasive: it dodges the " +
-          'question, merely restates what the code does, or bluffs without real understanding.\n' +
-          '- Always give a lesson that teaches the next level, grounded in their specific diff.\n' +
-          '- The suggestion must be a concrete thing they could build/push tomorrow.\n' +
-          '- You may be given recent mood/energy context. NEVER let it affect the verdict. Use it ' +
-          'only to right-size tomorrow\'s suggestion (lighter scope on a low-energy run, a stretch ' +
-          'when they\'re flying) and, when it clearly fits, to add one brief, non-preachy line of ' +
-          'human encouragement in the lesson. If no context is given, ignore this rule.',
-        cache_control: { type: 'ephemeral' },
-      },
-    ],
-    tools: [VERDICT_TOOL],
-    tool_choice: { type: 'tool', name: 'render_verdict' },
+    temperature: 0.3,
+    max_tokens: 2048,
     messages: [
+      { role: 'system', content: VERDICT_INSTRUCTIONS },
       {
         role: 'user',
         content:
@@ -143,12 +136,9 @@ export async function evaluateAnswer({
     ],
   });
 
-  const toolUse = msg.content.find(
-    (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use' && b.name === 'render_verdict',
-  );
-  if (!toolUse) throw new Error('coach did not return a verdict');
+  const raw = completion.choices[0]?.message?.content ?? '';
+  const p = extractJson(raw) as Partial<VerdictPayload>;
 
-  const p = toolUse.input as Partial<VerdictPayload>;
   if (!p.verdict || !['good', 'wrong', 'none'].includes(p.verdict)) {
     throw new Error('coach returned an invalid verdict');
   }

@@ -656,7 +656,7 @@ function ConfigNeeded() {
         <div className="text-[22px] leading-[1.25] text-text">Add your keys to <span className="mono text-blue">.env.local</span></div>
         <div className="text-sm leading-[1.55] text-muted">
           Set <span className="mono">NEXT_PUBLIC_SUPABASE_URL</span>, <span className="mono">NEXT_PUBLIC_SUPABASE_ANON_KEY</span>,
-          <span className="mono"> SUPABASE_SERVICE_ROLE_KEY</span> and <span className="mono">ANTHROPIC_API_KEY</span>, then restart the dev server. See the README for the full setup.
+          <span className="mono"> SUPABASE_SERVICE_ROLE_KEY</span> and <span className="mono">NVIDIA_API_KEY</span>, then restart the dev server. See the README for the full setup.
         </div>
       </div>
     </Shell>

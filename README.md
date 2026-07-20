@@ -6,7 +6,7 @@ Daily discipline coach for self-taught developers. Promise the work, push it, an
 
 - Next.js 14 (App Router) + TypeScript
 - Supabase — Postgres + Auth (GitHub OAuth as the login)
-- Anthropic Claude — generates the question from your diff and judges your answer
+- NVIDIA-hosted `gpt-oss` (OpenAI-compatible API) — generates the question from your diff and judges your answer
 - GitHub REST API (polling) — detects your pushes and reads the diff
 - Resend — transactional email (daily reminder + accountability-partner ping)
 - Web Push (VAPID, via `web-push`) — browser/PWA push notifications
@@ -23,7 +23,7 @@ the coach asks one question about the actual diff → answer it → get a two-pa
 The post-verdict check-in is stored on each resolution and now actually does something:
 
 - **Coach uses it.** `resolve/submit` summarizes your recent mood/energy and passes it to
-  Claude as context. It never affects the verdict — it only right-sizes tomorrow's
+  the coach model as context. It never affects the verdict — it only right-sizes tomorrow's
   suggested commitment (lighter on a low-energy run, a stretch when you're flying).
 - **Insights surfaces it.** The Insights tab shows a 14-day mood chart, a 14-day energy
   chart, and a **reflections** list of your past notes.
@@ -41,7 +41,7 @@ Still a stub: the public-log share page.
 
 ## Setup
 
-You need a Supabase project, a GitHub OAuth app, and an Anthropic API key.
+You need a Supabase project, a GitHub OAuth app, and an NVIDIA API key (for the AI coach).
 
 ### 1. Supabase project
 
@@ -62,9 +62,11 @@ You need a Supabase project, a GitHub OAuth app, and an Anthropic API key.
    (`repo` is needed to read commits/diffs from private repos; use `public_repo` if you only
    care about public ones.)
 
-### 3. Anthropic API key
+### 3. AI coach (NVIDIA API key)
 
-Get a key from [console.anthropic.com](https://console.anthropic.com).
+The coach runs on an OpenAI-compatible endpoint — NVIDIA-hosted `openai/gpt-oss-20b`
+(`https://integrate.api.nvidia.com/v1`). Get a key from [build.nvidia.com](https://build.nvidia.com).
+To use a different model/provider, change the `MODEL`/`baseURL` in [`lib/coach.ts`](lib/coach.ts).
 
 ### 4. Email (SMTP / Gmail) — optional but needed for reminders/partner email
 
@@ -97,7 +99,7 @@ Fill in `.env.local` (already git-ignored):
 NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...        # server only — never exposed to the browser
-ANTHROPIC_API_KEY=...                # server only
+NVIDIA_API_KEY=...                   # server only — the AI coach
 
 NEXT_PUBLIC_APP_URL=http://localhost:3000   # used in notification links
 
@@ -167,7 +169,7 @@ app/
 lib/
   supabase/{client,server,admin,middleware}.ts — Supabase clients
   github.ts               — REST wrapper (repos, latest push, commit diff)
-  coach.ts                — Claude: generateQuestion + evaluateAnswer (mood-aware)
+  coach.ts                — gpt-oss (NVIDIA): generateQuestion + evaluateAnswer (mood-aware)
   mood.ts                 — summarizes recent mood/energy for the coach
   email.ts                — Resend send wrapper (no-op without a key)
   email-templates.ts      — reminder + partner-missed HTML emails
