@@ -97,6 +97,7 @@ export default function App() {
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [commits, setCommits] = useState<RepoCommit[]>([]);
   const [commitsLoading, setCommitsLoading] = useState(false);
+  const [share, setShare] = useState<{ publicEnabled: boolean; token: string | null; login: string | null } | null>(null);
   const [settings, setSettings] = useState<NotificationSettings | null>(null);
   const [pushBusy, setPushBusy] = useState(false);
   const [settingsNotice, setSettingsNotice] = useState<string | null>(null);
@@ -173,6 +174,13 @@ export default function App() {
   useEffect(() => {
     if (me?.repo && me.hasCommitments) loadToday();
   }, [me, loadToday]);
+
+  // Load share settings when the Settings tab opens.
+  useEffect(() => {
+    if (tab === 'settings') {
+      fetch('/api/share').then((r) => (r.ok ? r.json() : null)).then(setShare);
+    }
+  }, [tab]);
 
   // Load insights + recent commits whenever the tab is opened (always fresh).
   useEffect(() => {
@@ -276,6 +284,11 @@ export default function App() {
     setOverlay(null);
     setTab('today');
     setOnbStep('welcome');
+  };
+
+  const shareAction = async (body: Record<string, unknown>) => {
+    const res = await fetch('/api/share', { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) });
+    if (res.ok) setShare(await res.json());
   };
 
   const signInGitHub = async () => {
@@ -549,6 +562,10 @@ export default function App() {
         testBusy={testBusy}
         theme={theme}
         onSetTheme={setTheme}
+        share={share}
+        onTogglePublic={(enabled) => shareAction({ action: 'setPublic', enabled })}
+        onGenerateLink={() => shareAction({ action: 'generateToken' })}
+        onRevokeLink={() => shareAction({ action: 'revokeToken' })}
       />
     );
   } else if (!today) {

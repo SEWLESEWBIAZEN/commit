@@ -37,7 +37,18 @@ The post-verdict check-in is stored on each resolution and now actually does som
 - **Push notifications** — toggle in Settings registers a service worker and subscribes
   via VAPID. PWA install (`manifest.json` + `sw.js`) is what makes push reach iPhone.
 
-Still a stub: the public-log share page.
+### Public share page (recruiter-facing)
+
+Opt-in, privacy-safe "proof of consistency" pages, enabled from Settings → Share:
+
+- **Public profile** at `/u/<github-login>` (toggle on/off).
+- **Unlisted, revocable link** at `/share/<token>` for a specific recruiter.
+
+Both render the same **safe subset** — streak, longest streak, commit rate, days
+shipped, and the kept-commitment heatmap — derived purely from streak history.
+They never expose repo names, commit messages, reflections, mood, or the coach's
+lessons, so **private-repo content can't leak** (private activity counts only as
+anonymous totals). Requires migration `0004_share.sql`.
 
 ## Setup
 

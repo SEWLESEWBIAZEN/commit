@@ -56,12 +56,17 @@ interface SettingsScreenProps {
   testBusy?: boolean;
   theme?: 'light' | 'dark';
   onSetTheme?: (t: 'light' | 'dark') => void;
+  share?: { publicEnabled: boolean; token: string | null; login: string | null } | null;
+  onTogglePublic?: (enabled: boolean) => void;
+  onGenerateLink?: () => void;
+  onRevokeLink?: () => void;
 }
 
 export function SettingsScreen({
   login, avatar, timezone, repo, repos, disconnecting = false, onDisconnect,
   settings, onSaveSettings, onTogglePush, pushBusy = false, pushSupported = true, notice,
   onTest, testBusy = false, theme = 'dark', onSetTheme,
+  share, onTogglePublic, onGenerateLink, onRevokeLink,
 }: SettingsScreenProps = {}) {
   // Local mirror of server prefs for optimistic toggles + the partner draft.
   const [reminders, setReminders] = useState(true);
@@ -69,6 +74,14 @@ export function SettingsScreen({
   const [email, setEmail] = useState(true);
   const [partnerDraft, setPartnerDraft] = useState('');
   const [partnerSaved, setPartnerSaved] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const publicUrl = share?.login ? `${origin}/u/${share.login}` : '';
+  const tokenUrl = share?.token ? `${origin}/share/${share.token}` : '';
+  const copy = async (url: string) => {
+    try { await navigator.clipboard.writeText(url); setCopied(url); setTimeout(() => setCopied(null), 1500); } catch { /* ignore */ }
+  };
 
   useEffect(() => {
     if (!settings) return;
@@ -209,6 +222,49 @@ export function SettingsScreen({
                   );
                 })}
               </div>
+            </div>
+          </Group>
+        )}
+
+        {share && (
+          <Group header="share">
+            {/* public profile */}
+            <div className="border-b border-border-soft px-4 py-[14px]">
+              <div className="flex items-center gap-[13px]">
+                <span className="shrink-0 text-muted"><Icon name="globe" size={18} /></span>
+                <div className="flex-1">
+                  <div className="text-[15px] text-text">Public profile</div>
+                  <div className="mt-0.5 text-xs text-hint">A recruiter-safe page — streak, rate, heatmap. No repos or notes.</div>
+                </div>
+                <div onClick={() => onTogglePublic?.(!share.publicEnabled)} className="cursor-pointer">
+                  <Toggle on={share.publicEnabled} />
+                </div>
+              </div>
+              {share.publicEnabled && publicUrl && (
+                <button onClick={() => copy(publicUrl)} className="mono mt-2.5 flex w-full items-center gap-2 rounded border-0 bg-surface-2 px-3 py-2 text-left text-[12px] text-muted">
+                  <span className="flex-1 truncate">{publicUrl}</span>
+                  <span className="text-blue">{copied === publicUrl ? 'copied' : 'copy'}</span>
+                </button>
+              )}
+            </div>
+            {/* unlisted revocable link */}
+            <div className="px-4 py-[14px]">
+              <div className="flex items-center gap-[13px]">
+                <span className="shrink-0 text-muted"><Icon name="lock" size={18} /></span>
+                <div className="flex-1">
+                  <div className="text-[15px] text-text">Private share link</div>
+                  <div className="mt-0.5 text-xs text-hint">Unlisted &amp; revocable — send to one recruiter.</div>
+                </div>
+                {share.token
+                  ? <button onClick={onRevokeLink} className="border-0 bg-transparent p-0 text-[13px] text-red">Revoke</button>
+                  : <button onClick={onGenerateLink} className="border-0 bg-transparent p-0 text-[13px] text-blue">Create</button>}
+              </div>
+              {share.token && tokenUrl && (
+                <button onClick={() => copy(tokenUrl)} className="mono mt-2.5 flex w-full items-center gap-2 rounded border-0 bg-surface-2 px-3 py-2 text-left text-[12px] text-muted">
+                  <span className="flex-1 truncate">{tokenUrl}</span>
+                  <span className="text-blue">{copied === tokenUrl ? 'copied' : 'copy'}</span>
+                </button>
+              )}
             </div>
           </Group>
         )}
