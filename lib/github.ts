@@ -35,16 +35,23 @@ export interface RepoSummary {
 
 // Repos the user can pick from, most recently pushed first.
 export async function listRepos({ token }: GhOpts): Promise<RepoSummary[]> {
-  const repos = await gh<RepoSummary[]>(
-    '/user/repos?per_page=100&sort=pushed&affiliation=owner,collaborator',
-    token,
-  );
-  return repos.map((r) => ({
-    full_name: r.full_name,
-    private: r.private,
-    pushed_at: r.pushed_at,
-    language: r.language,
-  }));
+  const repos: RepoSummary[] = [];
+  for (let page = 1; ; page++) {
+    const pageRepos = await gh<RepoSummary[]>(
+      `/user/repos?per_page=100&page=${page}&sort=pushed&affiliation=owner,collaborator`,
+      token,
+    );
+    repos.push(
+      ...pageRepos.map((r) => ({
+        full_name: r.full_name,
+        private: r.private,
+        pushed_at: r.pushed_at,
+        language: r.language,
+      })),
+    );
+    if (pageRepos.length < 100) break;
+  }
+  return repos;
 }
 
 export interface LatestPush {

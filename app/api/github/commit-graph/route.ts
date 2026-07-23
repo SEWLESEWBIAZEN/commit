@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getContext } from '@/lib/server-context';
-import { listCommitsInRange } from '@/lib/github';
+import { listCommitsInRange, listRepos } from '@/lib/github';
 import { tzDateOf } from '@/lib/date';
 
 // Per-day commit counts for a given month (in the user's timezone), for the
@@ -14,9 +14,11 @@ export async function GET(request: NextRequest) {
   const year = parseInt(searchParams.get('year') || '', 10) || now.getUTCFullYear();
   const month = parseInt(searchParams.get('month') || '', 10) || now.getUTCMonth() + 1; // 1-12
 
-  if (ctx.repos.length === 0 || !ctx.token) {
+  if (!ctx.token) {
     return NextResponse.json({ year, month, counts: {}, total: 0 });
   }
+
+  const repos = (await listRepos({ token: ctx.token })).map((r) => r.full_name);
 
   // Pad the UTC window by ~14h on each side so timezone-edge commits land in
   // the right local day after bucketing.
@@ -24,9 +26,9 @@ export async function GET(request: NextRequest) {
   const until = new Date(Date.UTC(year, month, 1, 14));
 
   try {
-    // Aggregate commit counts per day across every tracked repo.
+    // Aggregate commit counts per day across every repository on the account.
     const perRepo = await Promise.all(
-      ctx.repos.map((r) =>
+      repos.map((r) =>
         listCommitsInRange(r, since.toISOString(), until.toISOString(), { token: ctx.token! }).catch(() => [] as string[]),
       ),
     );
